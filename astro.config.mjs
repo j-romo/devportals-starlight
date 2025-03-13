@@ -6,9 +6,9 @@ import starlight from '@astrojs/starlight';
 export default defineConfig({
 	integrations: [
 		starlight({
-			title: 'My Docs',
+			title: 'DevPortals.Tech',
 			social: {
-				github: 'https://github.com/withastro/starlight',
+				github: 'https://github.com/j-romo',
 			},
 			sidebar: [
 				{
