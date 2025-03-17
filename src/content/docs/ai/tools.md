@@ -1,11 +1,11 @@
 ---
-title: AI for DX
+title: AI Tools
 description: Introduction to AI in Developer Portals and Developer Experience
 ---
 
 # AI Tools for Developer Portals
 
-These are some of the most used AI-powered tools and platforms that integrate into developer portals to improve DX. Each of these can be explored in-depth in your future articles, including how they work, code samples, and integration demos:
+These are some of the most used AI-powered tools and platforms that integrate into developer portals to improve DX. 
 
 AI Chatbots and Assistants
 - OpenAI GPT-4 / GPT-3.5 – Power chatbots that answer developer questions, explain code, or provide API usage examples.

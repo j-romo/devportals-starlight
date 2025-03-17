@@ -1,5 +1,5 @@
 ---
-title: AI for DX
+title: Overview
 description: Introduction to AI in Developer Portals and Developer Experience
 ---
 

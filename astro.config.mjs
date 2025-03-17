@@ -27,6 +27,10 @@ export default defineConfig({
 					autogenerate: { directory: 'tools' },
 				},
 				{
+					label: 'AI',
+					autogenerate: { directory: 'ai' },
+				},
+				{
 					label: 'Migration Guides',
 					autogenerate: { directory: 'migration' },
 				},
