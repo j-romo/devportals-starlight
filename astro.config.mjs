@@ -50,6 +50,10 @@ export default defineConfig({
 					label: 'Style Guides',
 					autogenerate: { directory: 'style' },
 				},
+				{
+					label: 'Blog',
+					autogenerate: { directory: 'blog' },
+				},
 			],
 		}),
 	],
