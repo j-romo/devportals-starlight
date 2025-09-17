@@ -16,6 +16,16 @@ export default defineConfig({
 					label: 'GitHub',
 					href: 'https://github.com/j-romo',
 				},
+				{
+					icon: 'linkedin',
+					label: 'LinkedIn',
+					href: 'https://www.linkedin.com/company/devportals-tech',
+				},
+				{
+					icon: 'instagram',
+					label: 'Instagram',
+					href: 'https://www.instagram.com/devportals.tech',
+				},
 			],
 			plugins: [
 				starlightBlog()
@@ -43,8 +53,12 @@ export default defineConfig({
 				// ],
 				// },
 				{
-					label: 'Tools',
-					autogenerate: { directory: 'tools' },
+					label: 'Markup Languages',
+					autogenerate: { directory: 'markup' },
+				},
+				{
+					label: 'Frameworks',
+					autogenerate: { directory: 'frameworks' },
 				},
 				{
 					label: 'Online Resources',

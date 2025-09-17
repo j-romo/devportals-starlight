@@ -1,0 +1,90 @@
+---
+title: Markup Languages for Technical Writing
+description: A comprehensive guide to choosing the right markup language for your documentation needs
+---
+
+import { Card, CardGrid } from '@astrojs/starlight/components';
+
+As developer portals evolve, choosing the right markup language becomes crucial for maintaining scalable, collaborative, and future-proof documentation. This section explores the most popular markup languages used in technical writing today.
+
+## Why Markup Languages Matter
+
+Modern documentation requires more than just plain text. Technical writers need:
+
+- **Version control compatibility** for collaborative workflows
+- **Semantic structure** for consistent styling and accessibility
+- **Tool ecosystem support** for automated publishing and integration
+- **Developer adoption** for seamless team collaboration
+- **Future portability** to avoid vendor lock-in
+
+## Popular Markup Languages
+
+<CardGrid stagger>
+	<Card title="Markdown (.md)" icon="document">
+		The most widely adopted markup language. Simple syntax, broad tool support, perfect for basic documentation needs.
+		
+		**Best for**: README files, basic docs, GitHub-based workflows
+	</Card>
+	
+	<Card title="MDX (.mdx)" icon="react">
+		Markdown with JSX components. Combines the simplicity of Markdown with the power of interactive React components.
+		
+		**Best for**: Interactive docs, component libraries, modern web frameworks
+	</Card>
+	
+	<Card title="reStructuredText (.rst)" icon="setting">
+		Python's documentation standard. Rich semantic markup with powerful cross-referencing and extension capabilities.
+		
+		**Best for**: API documentation, Sphinx-based sites, Python projects
+	</Card>
+	
+	<Card title="AsciiDoc (.adoc)" icon="open-book">
+		Feature-rich markup language designed for technical documentation. More powerful than Markdown with book-quality output.
+		
+		**Best for**: Technical manuals, books, complex documentation projects
+	</Card>
+</CardGrid>
+
+## Choosing the Right Markup Language
+
+Your choice depends on several factors:
+
+### Team & Ecosystem
+- **Developer familiarity**: Markdown wins for general adoption
+- **Existing toolchain**: Consider what your team already uses
+- **Publishing platform**: Some platforms favor specific formats
+
+### Content Complexity
+- **Simple docs**: Markdown is sufficient
+- **Interactive content**: MDX provides component integration
+- **Cross-references**: reStructuredText excels at linking
+- **Rich formatting**: AsciiDoc offers the most features
+
+### Long-term Considerations
+- **Migration paths**: How easy is it to convert between formats?
+- **Tool ecosystem**: Will tools continue to support your choice?
+- **Standardization**: Is the format actively maintained?
+
+## Migration Strategies
+
+When migrating between markup languages:
+
+1. **Start with content audit** - What features do you actually use?
+2. **Choose automated tools** - Don't convert manually
+3. **Plan for content gaps** - Some features may not translate directly
+4. **Test thoroughly** - Especially links and formatting
+5. **Consider hybrid approaches** - You don't need to convert everything at once
+
+## What's Next
+
+Explore the individual markup language guides to understand:
+
+- Syntax comparison and examples
+- Tool ecosystem and integrations
+- Migration paths between formats
+- Best practices for each language
+- Real-world implementation examples
+
+---
+
+*This overview reflects current industry practices as of 2025. The landscape continues to evolve with new tools and platforms.*

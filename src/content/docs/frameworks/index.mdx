@@ -1,0 +1,130 @@
+---
+title: Documentation Frameworks & Docs-as-Code
+description: Comparing modern documentation frameworks for scalable developer portals
+---
+
+import { Card, CardGrid } from '@astrojs/starlight/components';
+
+The shift from traditional documentation tools to docs-as-code workflows has transformed how teams build and maintain developer portals. This section explores the leading frameworks and the strategic decisions behind choosing the right platform.
+
+## The Docs-as-Code Revolution
+
+Modern documentation teams are moving away from proprietary platforms toward developer-centric workflows that treat documentation like code:
+
+- **Version control integration** with Git workflows
+- **Collaborative editing** through pull requests and code review
+- **Automated deployment** via CI/CD pipelines
+- **Developer tooling** for local development and testing
+- **Markdown-first** authoring for platform portability
+
+## Framework Categories
+
+### Static Site Generators vs. Meta-Frameworks
+
+The documentation framework landscape primarily splits into two approaches:
+
+<CardGrid stagger>
+	<Card title="Documentation-First Frameworks" icon="document">
+		**Examples**: Docusaurus, GitBook, Starlight
+		
+		Built specifically for documentation with opinionated defaults, content management, and docs-specific features out of the box.
+		
+		**Pros**: Fast setup, docs-optimized features, community themes  
+		**Cons**: Less flexibility, harder to customize beyond docs
+	</Card>
+	
+	<Card title="General-Purpose Meta-Frameworks" icon="react">
+		**Examples**: Next.js, Nuxt.js, SvelteKit
+		
+		Flexible web frameworks that can be configured for documentation but offer unlimited customization potential.
+		
+		**Pros**: Maximum flexibility, rich ecosystem, custom functionality  
+		**Cons**: More setup required, need to build docs features
+	</Card>
+</CardGrid>
+
+## Key Framework Comparison: Next.js vs. Docusaurus
+
+The two most popular choices for modern developer portals represent different philosophies:
+
+### Next.js: Maximum Flexibility
+- **React ecosystem**: Leverage the entire React component library
+- **Custom functionality**: Build interactive demos, API explorers, dashboards
+- **Performance**: Advanced optimization with App Router and Server Components
+- **Deployment**: Seamless Vercel integration or self-hosted options
+- **Learning curve**: Requires React knowledge and more configuration
+
+**Best for**: Teams wanting custom functionality, interactive documentation, or existing React expertise
+
+### Docusaurus: Documentation-Optimized
+- **Facebook/Meta maintained**: Battle-tested by large-scale documentation needs
+- **Built-in features**: Versioning, i18n, search, and blogging out of the box
+- **Content management**: Sophisticated sidebar generation and content organization
+- **Plugin ecosystem**: Rich plugin system for extending functionality
+- **Learning curve**: Minimal setup, docs-focused configuration
+
+**Best for**: Teams prioritizing speed-to-market, comprehensive docs features, or minimal maintenance overhead
+
+## Framework Selection Criteria
+
+### Team Considerations
+- **Technical expertise**: React familiarity vs. docs-first preferences
+- **Maintenance capacity**: Custom builds require ongoing developer attention
+- **Existing infrastructure**: Integration with current deployment pipelines
+- **Future flexibility**: How likely are you to need custom functionality?
+
+### Content Requirements
+- **Content complexity**: Simple docs vs. interactive experiences
+- **Multi-language support**: Built-in i18n vs. custom implementation
+- **Versioning needs**: API documentation vs. evergreen content
+- **Search requirements**: Basic search vs. advanced filtering
+
+### Business Factors
+- **Time to market**: Documentation-first frameworks ship faster
+- **Development resources**: Custom frameworks require more developer time
+- **Scalability needs**: Traffic patterns and content volume
+- **Budget constraints**: Hosting costs and development time
+
+## Migration Strategies
+
+### From Legacy Platforms
+When migrating from proprietary documentation platforms:
+
+1. **Content audit**: Catalog existing content and required features
+2. **Tool evaluation**: Match requirements to framework capabilities
+3. **Proof of concept**: Build a sample with your most complex content
+4. **Gradual migration**: Phase the transition to minimize disruption
+5. **Team training**: Invest in docs-as-code workflow education
+
+### Between Modern Frameworks
+Moving between Next.js and Docusaurus (or similar):
+
+- **Content portability**: Markdown content transfers easily
+- **Feature mapping**: Identify framework-specific features to rebuild
+- **URL preservation**: Maintain SEO and bookmark compatibility
+- **Component translation**: Convert between React and framework-specific components
+
+## Future Trends
+
+### Emerging Patterns
+- **AI-assisted content**: Integration with AI writing and review tools
+- **Component-driven docs**: Reusable documentation components
+- **Edge deployment**: Faster global content delivery
+- **Developer experience**: Improved local development workflows
+
+### Platform Evolution
+- **Hybrid approaches**: Combining multiple frameworks for different content types
+- **Headless documentation**: API-driven content management with flexible frontends
+- **Performance focus**: Core Web Vitals optimization for documentation sites
+
+## Implementation Examples
+
+This site demonstrates the Astro Starlight approach, but I'm also building comparative examples:
+
+- **Next.js demo**: Interactive API explorer with live code examples
+- **Docusaurus demo**: Multi-version documentation with comprehensive search
+- **Migration case study**: Detailed comparison of implementation approaches
+
+---
+
+*Explore the individual framework guides for detailed implementation strategies, migration paths, and real-world examples from teams who've made these transitions.*
