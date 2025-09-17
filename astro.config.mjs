@@ -1,6 +1,7 @@
 // @ts-check
 import { defineConfig } from 'astro/config';
 import starlight from '@astrojs/starlight';
+import starlightBlog from 'starlight-blog';
 
 // https://astro.build/config
 export default defineConfig({
@@ -9,9 +10,16 @@ export default defineConfig({
 		starlight({
 			title: 'DevPortals.Tech',
 			description: 'Evaluating and building better developer portals',
-			social: {
-				github: 'https://github.com/j-romo',
-			},
+			social: [
+				{
+					icon: 'github',
+					label: 'GitHub',
+					href: 'https://github.com/j-romo',
+				},
+			],
+			plugins: [
+				starlightBlog()
+			],
 			sidebar: [
 				{ label: 'About', link: '/about/' },
 				{
@@ -49,10 +57,6 @@ export default defineConfig({
 				{
 					label: 'Style Guides',
 					autogenerate: { directory: 'style' },
-				},
-				{
-					label: 'Blog',
-					autogenerate: { directory: 'blog' },
 				},
 			],
 		}),
