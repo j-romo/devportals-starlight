@@ -1,7 +1,7 @@
 ---
 title: "From reST to MDX: Why Documentation Frameworks Are Evolving"
 description: "Tracing the shift from reStructuredText to Markdown and MDX, and what it means for modern developer portals."
-date: 2025-09-17
+date: 2025-08-10
 authors:
   - name: Joaquin Romo
 tags:

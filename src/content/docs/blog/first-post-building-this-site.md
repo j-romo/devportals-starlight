@@ -1,7 +1,7 @@
 ---
 title: "Building DevPortals.tech: From Idea to Live Site"
 description: "How I built this developer portal evaluation site using Astro Starlight"
-date: 2025-09-16
+date: 2025-07-20
 authors:
   - name: Joaquin Romo
 tags:
