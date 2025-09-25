@@ -10,6 +10,12 @@ export default defineConfig({
 		starlight({
 			title: 'DevPortals.Tech',
 			description: 'Evaluating and building better developer portals',
+			logo: {
+				src: './src/assets/devportals-logo.png',
+			},
+			customCss: [
+				'./src/styles/custom.css',
+			],
 			social: [
 				{
 					icon: 'github',
