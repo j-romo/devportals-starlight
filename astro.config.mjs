@@ -34,24 +34,12 @@ export default defineConfig({
 				{ label: 'About', link: '/about/' },
 				{
 					label: 'Migration',
-					items: [
-						{ label: 'Migration Strategy', link: '/migration/migration-strategy/' },
-				],
+					autogenerate: { directory: 'migration' },
 				},
 				{
 					label: 'AI for Developer Experience',
-					items: [
-						{ label: 'Overview', link: '/ai/overview/' },
-						{ label: 'AI Tools', link: '/ai/tools/' },
-				],
+					autogenerate: { directory: 'ai' },
 				},
-				// Add more sections as you create them
-				// {
-				// label: 'Demos',
-				// items: [
-				// 	{ label: 'Live Projects', link: '/demos/' },
-				// ],
-				// },
 				{
 					label: 'Markup Languages',
 					autogenerate: { directory: 'markup' },
