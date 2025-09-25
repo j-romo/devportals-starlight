@@ -12,8 +12,6 @@ tags:
   - version-control
 ---
 
-# Content Branching Strategy for Documentation Sites
-
 When building a professional documentation site like DevPortals.tech, maintaining content quality while enabling rapid development requires a strategic approach to version control. Here's the branching strategy I've implemented for managing documentation content lifecycle.
 
 ## The Challenge

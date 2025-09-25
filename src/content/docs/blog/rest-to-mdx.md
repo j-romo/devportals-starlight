@@ -11,8 +11,6 @@ tags:
   - developer-portals
 ---
 
-# From reST to MDX: Why Documentation Frameworks Are Evolving
-
 Documentation frameworks are not just technical choices — they reflect **cultural shifts** in how we think about developer experience.  
 
 For years, **reStructuredText (reST)** powered serious technical documentation, especially in the Python and scientific communities.  
