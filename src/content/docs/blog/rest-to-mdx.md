@@ -6,9 +6,10 @@ authors:
   - name: Joaquin Romo
 tags:
   - documentation
-  - MDX
+  - mdx
   - reStructuredText
   - developer-portals
+  - migration
 ---
 
 Documentation frameworks are not just technical choices — they reflect **cultural shifts** in how we think about developer experience.  

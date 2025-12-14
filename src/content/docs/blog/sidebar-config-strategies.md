@@ -5,8 +5,7 @@ date: 2025-09-17
 authors:
   - name: Joaquin Romo
 tags:
-  - starlight
-  - astro
+  - astro-starlight
   - documentation
   - configuration
   - navigation

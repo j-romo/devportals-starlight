@@ -5,8 +5,7 @@ date: 2025-07-20
 authors:
   - name: Joaquin Romo
 tags:
-  - starlight
-  - astro
+  - astro-starlight
   - developer-portals
   - migration
 ---
