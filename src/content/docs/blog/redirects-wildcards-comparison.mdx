@@ -1,0 +1,250 @@
+---
+title: "Working with Redirects in Netlify: A Guide to Wildcards and Catch-Alls"
+description: "Understanding Netlify redirect patterns, wildcards, catch-alls, and how they compare to other platforms like Vercel, Apache, and Nginx"
+date: 2025-12-18
+authors:
+  - name: Joaquin Romo
+tags:
+  - netlify
+  - redirects
+  - wildcards
+  - web-hosting
+  - documentation
+  - url-management
+tableOfContents:
+  minHeadingLevel: 2
+  maxHeadingLevel: 2
+draft: true
+---
+
+When deploying documentation sites or web applications on Netlify, understanding how to configure redirects properly is essential for maintaining URL structure, handling versioned content, and ensuring users land on the right pages. This guide explains the core concepts of Netlify redirects, with a focus on wildcard patterns and catch-all rules.
+
+## Understanding `*` and `:splat`
+
+Netlify's redirect system uses a simple but powerful pattern-matching system for handling dynamic URL paths:
+
+### The Wildcard Pattern
+
+- **`*` in the `from` path**: Acts as a wildcard that captures everything after that point in the URL
+- **`:splat` in the `to` path**: Inserts the content captured by the `*`
+
+### Example
+
+In your `netlify.toml` file:
+
+```toml
+[[redirects]]
+from = "/docs/v2.12/*"
+to = "/docs/current/:splat"
+status = 302
+```
+
+**How it works:**
+- User visits: `/docs/v2.12/installation/guide.html`
+- The `*` captures: `installation/guide.html`
+- Redirects to: `/docs/current/installation/guide.html`
+
+### Multiple Wildcards
+
+Netlify only supports **one wildcard per redirect rule**. If you need more complex patterns, you'll need multiple redirect rules or use query parameters with `:splat` variations.
+
+### When to Use This Pattern
+
+Use `*` and `:splat` when you need to:
+- Redirect an entire version or section while preserving the path structure
+- Alias old URLs to new locations
+- Consolidate multiple versions to a single current version
+
+## What Are CATCH ALLS?
+
+"Catch-all" redirects are rules placed at the end of your redirect configuration that handle any URLs not matched by previous, more specific rules. They act as fallback handlers.
+
+### Two Types of Catch-Alls
+
+**1. Version-specific catch-alls (rewrites):**
+
+```toml
+[[redirects]]
+from = "/docs/atlas/operator/v2.11/*"
+to = "/docs/atlas/operator/v2.11/:splat"
+status = 200
+```
+
+- **Status 200**: This is a *rewrite*, not a redirect
+- The URL stays the same in the browser
+- Ensures proper internal routing for all pages within that version
+
+**2. Global catch-alls (redirects):**
+
+```toml
+[[redirects]]
+from = "/docs/atlas/operator/*"
+to = "/docs/atlas/operator/current/:splat"
+```
+
+- Redirects any unmatched paths to the current version
+- Acts as the ultimate fallback
+- Must be placed **last** in your configuration
+
+### Why Use Catch-Alls?
+
+- **Ensure no 404s**: Every URL pattern gets handled
+- **Version management**: Automatically route traffic from unversioned URLs
+- **Simplify configuration**: Reduces the need for explicit rules for every page
+
+## Redirect Configuration Best Practices
+
+### 1. Order Matters
+
+Netlify processes redirects **from top to bottom**. The first matching rule wins. Structure your rules like this:
+
+1. Specific page redirects
+2. Version alias redirects  
+3. Feature-specific redirects
+4. Version catch-alls (status 200)
+5. Global catch-all (last resort)
+
+### 2. Status Codes
+
+- **301**: Permanent redirect (use for removed content)
+- **302**: Temporary redirect (use for version aliases)
+- **200**: Rewrite (URL doesn't change in browser)
+
+### 3. Query Parameters and Fragments
+
+Use `:splat` variations for advanced patterns:
+- `:splat` - captures the path
+- Additional parameters can be preserved with proper configuration
+
+### 4. Testing
+
+Always test your redirects in a deploy preview before merging to production. Check:
+- Does the redirect go to the correct destination?
+- Is the status code correct?
+- Are query parameters preserved if needed?
+
+## Platform-Specific Redirect Comparison
+
+Different hosting platforms have their own redirect configuration systems. Here's how they compare:
+
+### Netlify
+
+**Configuration file:** `netlify.toml`
+
+Example redirect rule:
+
+```toml
+[[redirects]]
+from = "/old-path/*"
+to = "/new-path/:splat"
+status = 302
+```
+
+**Pros:** Simple TOML syntax, supports rewrites, integrated with deployment  
+**Cons:** Limited to one wildcard per rule
+
+### Vercel
+
+**Configuration file:** `vercel.json`
+
+Example redirect rule in JSON format:
+
+```json
+{
+  "redirects": [
+    {
+      "source": "/old-path/:path*",
+      "destination": "/new-path/:path*",
+      "permanent": false
+    }
+  ]
+}
+```
+
+**Pros:** JSON format, supports named parameters, multiple wildcards  
+**Cons:** More verbose syntax
+
+### Apache
+
+**Configuration file:** `.htaccess`
+
+Example using RewriteRule:
+
+```apache
+RewriteEngine On
+RewriteRule ^old-path/(.*)$ /new-path/$1 [R=302,L]
+```
+
+**Pros:** Powerful regex support, widely used  
+**Cons:** Complex syntax, requires mod_rewrite module
+
+### Nginx
+
+**Configuration file:** `nginx.conf` or site config
+
+Example rewrite directive:
+
+```nginx
+rewrite ^/old-path/(.*)$ /new-path/$1 redirect;
+```
+
+**Pros:** Fast, efficient, powerful regex  
+**Cons:** Requires server configuration access
+
+### AWS CloudFront/S3
+
+**Configuration:** Lambda@Edge functions or S3 routing rules
+
+Example Lambda@Edge function:
+
+```javascript
+exports.handler = async (event) => {
+  const request = event.Records[0].cf.request;
+  if (request.uri.startsWith('/old-path/')) {
+    return {
+      status: '302',
+      headers: {
+        'location': [{
+          value: request.uri.replace('/old-path/', '/new-path/')
+        }]
+      }
+    };
+  }
+  return request;
+};
+```
+
+**Pros:** Highly scalable, programmable  
+**Cons:** More complex setup, requires AWS knowledge
+
+## Syntax Comparison Table
+
+| Platform | Config File | Wildcard Syntax | Capture Variable | Status Code | Regex Support |
+|----------|-------------|-----------------|------------------|-------------|---------------|
+| **Netlify** | `netlify.toml` | `*` | `:splat` | `status = 302` | Limited |
+| **Vercel** | `vercel.json` | `:path*` | `:path` | `permanent: false` | Named params |
+| **Apache** | `.htaccess` | `(.*)` | `$1` | `[R=302]` | Full regex |
+| **Nginx** | `nginx.conf` | `(.*)` | `$1` | `redirect` / `permanent` | Full regex |
+| **AWS** | Lambda/XML | Custom JS/XML | Custom variables | In code/config | Programmable |
+
+## Key Differences
+
+| Feature | Netlify | Vercel | Apache/Nginx |
+|---------|---------|--------|--------------|
+| **Learning Curve** | Easy | Easy | Medium-Hard |
+| **Wildcards per rule** | 1 | Multiple | Unlimited |
+| **Rewrites (status 200)** | ✅ Yes | ✅ Yes | ✅ Yes |
+| **Query preservation** | Automatic | Configurable | Manual |
+| **Server access required** | ❌ No | ❌ No | ✅ Yes |
+
+## Conclusion
+
+Understanding redirect patterns is crucial for maintaining a professional web presence. Whether you're managing versioned documentation, restructuring URLs, or migrating content, the `*` and `:splat` pattern in Netlify provides a straightforward way to handle dynamic paths.
+
+Remember:
+- Always place more specific rules before general ones
+- Use catch-alls as your safety net
+- Test redirects in deploy previews
+- Choose the right status code for your use case
+
+While Netlify's redirect system is simpler than regex-based alternatives like Apache or Nginx, it's powerful enough for most documentation and application needs. If you need more complex patterns, consider combining multiple rules or exploring other platforms that support multiple wildcards and named parameters.
