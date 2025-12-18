@@ -32,7 +32,11 @@ export default defineConfig({
 				},
 			],
 			plugins: [
-				starlightBlog(),
+				starlightBlog({
+					metrics: {
+						readingTime: true,
+					},
+				}),
 				catppuccin({
 					dark: { flavor: "frappe", accent: "sky" },
 					light: { flavor: "latte", accent: "mauve" },
