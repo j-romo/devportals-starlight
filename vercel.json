@@ -1,0 +1,9 @@
+{
+  "redirects": [
+    {
+      "source": "/frameworks/:path*",
+      "destination": "/frameworks-and-tools/:path*",
+      "permanent": true
+    }
+  ]
+}
