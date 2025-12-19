@@ -17,46 +17,48 @@ tableOfContents:
 draft: true
 ---
 
-When I started working on our developer portal migration, I didn't expect redirect configuration to become one of the most critical pieces of infrastructure. But as our documentation platform evolved—moving from legacy systems to a modern docs-as-code workflow—redirects became the safety net that prevented broken links and maintained trust with our developer community.
+Redirects are one of those infrastructure pieces you don't think about until you need them. I've worked with them in two different contexts: a large-scale developer portal using Netlify with complex wildcard patterns and catch-all rules, and now this personal portfolio site on Vercel where I just implemented my first redirect after renaming a directory.
 
-## The Challenge: Documentation That Never Stops Evolving
+What struck me is how different platforms handle the same fundamental problem—keeping URLs stable when content moves—but with vastly different syntax and approaches. Whether you're managing hundreds of versioned documentation pages or just reorganizing a small site, the principles remain the same.
 
-Developer portals are living platforms. Unlike traditional documentation that might see quarterly updates, our portal changes constantly:
+## Why URLs Break (and Why It Matters)
 
-- **Weekly content updates** from multiple technical writers
-- **Monthly product releases** requiring new version branches
-- **Quarterly restructures** as products evolve and merge
-- **Annual migrations** between documentation platforms or frameworks
+Content evolves. Files get renamed, directories get reorganized, documentation gets restructured. Every change risks breaking URLs that someone, somewhere, has bookmarked, shared, or embedded.
 
-Each change risks breaking existing URLs that developers have bookmarked, linked to in Stack Overflow answers, embedded in tutorials, or integrated into their CI/CD pipelines. A broken documentation link isn't just an inconvenience—it's a broken promise to developers who depend on stable reference material.
+On this site, I recently merged two sparse sections—frameworks and tools—into a single `frameworks-and-tools` directory. Simple change, but any existing links to `/frameworks/*` would now return 404s. On a larger developer portal, these changes happen constantly: version branches, content restructures, product renamings.
 
-## Why Redirects Matter in Docs-as-Code
+The impact differs by scale:
+- **Small sites**: Broken bookmarks, lost SEO ranking
+- **Developer portals**: Broken Stack Overflow answers, tutorial videos with dead links, CI/CD scripts that can't fetch docs
+- **Any site**: Lost trust when links don't work
 
-The docs-as-code methodology brings tremendous benefits: version control, automated testing, collaborative editing through pull requests. But it also introduces new redirect challenges that traditional CMS platforms handled automatically:
+A broken documentation link isn't just bad UX—it's a broken promise.
 
-### 1. File-Based Routing Creates URL Coupling
+## Two Projects, Two Approaches
 
-When documentation URLs map directly to file paths in your repository, renaming a file or reorganizing folders breaks URLs. In our migration from a legacy system to Astro Starlight, we couldn't just move files—we had to map every old URL to its new location.
+### This Site: Simple Structural Change on Vercel
 
-### 2. Version Management Requires Redirect Strategy
+After consolidating my frameworks and tools sections, I needed one redirect rule in `vercel.json`:
 
-Modern developer portals maintain multiple documentation versions simultaneously. When we deprecated v2.11 of our API docs, we needed to:
-- Redirect users from `/docs/v2.11/*` to `/docs/current/*`
-- Preserve the specific page they were viewing
-- Ensure search engine rankings transferred to the new URLs
+```json
+{
+  "redirects": [
+    {
+      "source": "/frameworks/:path*",
+      "destination": "/frameworks-and-tools/:path*",
+      "permanent": true
+    }
+  ]
+}
+```
 
-### 3. Content Restructuring Breaks Existing Links
+That's it. Vercel's syntax is JSON-based, uses `:path*` for wildcards, and `permanent: true` for 301 redirects. Deploy and done.
 
-As our product matured, we reorganized documentation from technology-centric sections to use-case-driven guides. Hundreds of pages moved. Without redirect rules, every external link, bookmark, and integration would have returned 404s.
+### Enterprise Developer Portal: Complex Version Management on Netlify
 
-## Redirect Strategies and Use Cases
+At work, the redirect needs are more complex. Managing multiple documentation versions requires wildcard patterns and catch-all rules in `netlify.toml`:
 
-Understanding when and how to implement redirects is essential for documentation platforms. Here are the most common scenarios where redirect strategies become critical:
-
-### Pattern-Based Redirects for Version Management
-
-When maintaining multiple documentation versions, wildcard patterns allow you to handle entire version trees with single rules. Using Netlify's syntax (`*` and `:splat`), you can redirect complete sections:
-
+**Version redirects:**
 ```toml
 [[redirects]]
 from = "/docs/v2.12/*"
@@ -64,13 +66,7 @@ to = "/docs/current/:splat"
 status = 302
 ```
 
-This single rule handles hundreds of pages. When users visit `/docs/v2.12/installation/guide.html`, they're automatically redirected to `/docs/current/installation/guide.html`—preserving their specific destination while moving them to the current version.
-
-### Catch-All Redirects as Safety Nets
-
-Catch-all redirects handle any URL not matched by more specific patterns, acting as fallback handlers to prevent 404 errors:
-
-**Version-specific catch-all (rewrite):**
+**Catch-all for SPA routing:**
 ```toml
 [[redirects]]
 from = "/docs/api/v2.11/*"
@@ -78,73 +74,99 @@ to = "/docs/api/v2.11/:splat"
 status = 200
 ```
 
-This rewrite (status 200) ensures proper internal routing for all pages within a specific version without changing the URL in the browser—essential for Single Page Application routing.
-
-**Global catch-all (redirect):**
+**Global fallback:**
 ```toml
 [[redirects]]
 from = "/docs/api/*"
 to = "/docs/api/current/:splat"
 ```
 
-This redirects any unmatched paths to the current version, acting as our ultimate safety net.
+Netlify uses TOML configuration, `:splat` instead of `:path*`, and supports status 200 rewrites for single-page applications. The syntax differs, but the goal is the same: keep URLs working.
 
-## Lessons Learned: Redirect Strategy for Developer Portals
+## Platform Differences: Same Goal, Different Syntax
+
+Here's what I learned working across both platforms:
+
+### Vercel (JSON)
+- **Configuration**: `vercel.json` in repository root
+- **Wildcard**: `:path*` captures remaining path segments
+- **Status codes**: `permanent: true` (301) or `permanent: false` (302)
+- **Best for**: Simple redirects, modern frameworks, multiple wildcards per rule
+
+### Netlify (TOML)
+- **Configuration**: `netlify.toml` in repository root
+- **Wildcard**: `:splat` captures remaining path segments
+- **Status codes**: Explicit `status = 301/302/200`
+- **Special feature**: Status 200 rewrites (serve different content without changing URL)
+- **Limitation**: One wildcard per rule
+- **Best for**: Complex versioned docs, SPA routing with rewrites
+
+### The Common Patterns
+
+Despite syntax differences, redirect strategies are universal:
+
+1. **Wildcard redirects** - One rule handles entire directory trees
+2. **Permanent (301) vs Temporary (302)** - Choose based on whether the change is forever
+3. **Catch-all patterns** - Fallback rules prevent 404s
+4. **Order matters** - Most platforms process rules sequentially, first match wins
+5. **Version control** - Both platforms treat redirects as code, reviewed in pull requests
+
+## Practical Lessons from Both Projects
 
 ### 1. Redirects Are Infrastructure, Not Afterthoughts
 
-Redirect planning should happen **before** you restructure content, not after. In our docs-as-code workflow, redirect configuration lives in version control alongside the content:
+For this site, I created the redirect rule in the same commit as the directory rename. At work, redirect configuration lives in version control alongside content—every pull request that changes URLs includes the corresponding redirect rules.
 
+This treats redirects as first-class infrastructure:
 ```
-docs-repo/
+project-repo/
 ├── src/content/
-├── netlify.toml  ← Redirect rules go here
-└── README.md
+├── vercel.json     ← Vercel redirects
+└── netlify.toml    ← Or Netlify redirects
 ```
-
-Every pull request that changes URLs should include corresponding redirect rules. This treats redirects as first-class infrastructure, reviewed and tested like any other code change.
 
 ### 2. Order Matters: Specific Before General
 
-We learned this the hard way. Redirect platforms process rules sequentially—the first match wins. Our initial configuration had the global catch-all at the top, which meant specific redirects never triggered.
+Redirect platforms process rules sequentially—first match wins. This is critical for catch-all patterns:
 
-**The correct structure:**
-1. Specific page redirects (exact matches)
-2. Version alias redirects
-3. Feature-specific patterns
-4. Version catch-alls (status 200 rewrites)
-5. Global catch-all (last resort)
+**Wrong order (catch-all first):**
+```toml
+# This will match everything, specific rules never trigger
+[[redirects]]
+from = "/docs/*"
+to = "/docs/current/:splat"
+
+[[redirects]]
+from = "/docs/old-guide"
+to = "/docs/new-guide"  # Never reached!
+```
+
+**Correct order (specific first):**
+```toml
+[[redirects]]
+from = "/docs/old-guide"
+to = "/docs/new-guide"  # Matches first
+
+[[redirects]]
+from = "/docs/*"
+to = "/docs/current/:splat"  # Catches everything else
+```
 
 ### 3. Choose the Right Status Code
 
-Understanding HTTP status codes became crucial:
-- **301 (Permanent)**: For content permanently moved or removed—tells search engines to update their indexes
-- **302 (Temporary)**: For version aliases that might change—preserves SEO for the original URL
-- **200 (Rewrite)**: For SPA routing—serves different content without changing the browser URL
+- **301 (Permanent)**: I used this for my directory rename—it's permanent
+- **302 (Temporary)**: Better for version aliases that might change
+- **200 (Rewrite)**: Netlify-specific, for SPA routing without changing browser URL
 
-We initially used 301 for everything, which hurt our SEO when we later needed to change redirect targets. Now we use 302 for version aliases and 301 only when content is truly gone forever.
+The status code tells search engines whether to update their indexes (301) or keep the original URL (302).
 
-### 4. Test in Deploy Previews
+### 4. Test Before Production
 
-Netlify's deploy preview feature became essential for testing redirects before production:
+Both Vercel and Netlify offer deploy previews—every PR gets a preview URL to test redirects before merging. Essential for catching issues early.
 
-```bash
-# Every PR gets a preview URL
-https://preview-branch-name--site-name.netlify.app
-```
+### 5. Documentation Helps Future You
 
-We created a redirect test checklist:
-- ✅ Does the redirect reach the correct destination?
-- ✅ Is the status code appropriate (301/302/200)?
-- ✅ Are query parameters preserved?
-- ✅ Does the redirect work from external referrers?
-
-### 5. Monitor and Maintain
-
-Redirects aren't set-and-forget. We monitor:
-- **404 rates**: Spikes indicate missing redirect rules
-- **Redirect hit counts**: Identify which old URLs still get traffic
-- **Redirect chains**: Ensure we don't have A→B→C patterns that slow page loads
+When I implemented my redirect, I referenced our comprehensive technical guide. Six months from now, I won't remember the syntax differences between `:splat` and `:path*`—but the documentation will still be there.
 
 ## Choosing the Right Platform for Redirect Management
 
@@ -165,15 +187,15 @@ The key is choosing a platform that matches your team's workflow and technical c
 
 > 📚 **Want the technical details?** Check out our comprehensive [Redirect Configuration Guide](/frameworks-and-tools/redirect-configuration-guide/) comparing syntax, features, and implementation across platforms.
 
-## The Impact: What Good Redirects Enable
+## What Good Redirects Enable
 
-Implementing a comprehensive redirect strategy transformed how we approach documentation:
+Whether managing a small portfolio site or a large developer portal, redirects provide the same benefits:
 
-- **Restructure content confidently** - reorganize pages, merge sections, and deprecate versions without breaking existing links
-- **Faster iteration** - no coordination needed with external teams who've linked to our docs
-- **Better developer trust** - users always land on relevant content, even from years-old bookmarks
-- **Sustainable evolution** - the documentation can grow and change without accumulating technical debt
-- **True docs-as-code** - content changes flow through Git without worrying about URL stability
+- **Restructure confidently** - reorganize content without worrying about breaking bookmarks or SEO
+- **Iterate faster** - make improvements without coordinating with everyone who's linked to your content
+- **Maintain trust** - users land on the right page, even from years-old links
+- **Sustainable growth** - sites can evolve without accumulating technical debt from fear of breaking URLs
+- **True docs-as-code** - content changes flow through Git with redirect rules reviewed like any other code
 
 ## Key Takeaways for Developer Portal Teams
 
@@ -188,13 +210,13 @@ If you're building or migrating a developer portal, treat redirects as critical 
 7. **Choose platforms that support docs-as-code** - file-based config beats UI-based config
 8. **Document your redirect strategy** - future team members will thank you
 
-## Looking Forward
+## Final Thoughts
 
-Redirect management isn't glamorous work. It's invisible when it works correctly—which is exactly the point. Developers shouldn't think about redirects. They should just land on the page they need, regardless of which old URL they clicked.
+Redirect management isn't glamorous work. It's invisible when it works correctly—which is exactly the point. Users shouldn't think about redirects. They should just land where they need to go, regardless of which old URL they clicked.
 
-As our developer portal continues evolving—and it will never stop evolving—redirects remain the safety net that lets us improve documentation without breaking trust. They're the infrastructure that makes docs-as-code workflows sustainable at scale.
+The platforms differ—Vercel's JSON vs Netlify's TOML, `:path*` vs `:splat`—but the principles are universal. Whether you're redirecting one renamed directory or managing hundreds of versioned documentation pages, the strategy remains the same: keep URLs stable, handle changes gracefully, and treat redirects as infrastructure.
 
-For developer portals, broken links aren't just bad UX—they're broken promises. Redirect strategies ensure that when we promise stable documentation, we deliver.
+I just implemented my first redirect on this site. At work, I work with complex multi-version redirect strategies. Both serve the same fundamental purpose: keeping promises to users who depend on links working.
 
 ---
 
