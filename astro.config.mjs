@@ -57,8 +57,8 @@ export default defineConfig({
 					autogenerate: { directory: 'markup' },
 				},
 				{
-					label: 'Frameworks',
-					autogenerate: { directory: 'frameworks' },
+					label: 'Frameworks & Tools',
+					autogenerate: { directory: 'frameworks-and-tools' },
 				},
 				{
 					label: 'Online Resources',

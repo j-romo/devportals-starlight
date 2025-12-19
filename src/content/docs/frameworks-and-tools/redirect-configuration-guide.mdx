@@ -1,0 +1,329 @@
+---
+title: "Redirect Configuration: Platform Comparison Guide"
+description: "A comprehensive comparison of redirect configuration across hosting platforms including Netlify, Vercel, Apache, Nginx, and AWS"
+tableOfContents:
+  minHeadingLevel: 2
+  maxHeadingLevel: 2
+---
+
+Understanding how to configure redirects across different hosting platforms is essential for maintaining URL structure, handling versioned content, and ensuring users land on the right pages. This guide provides a technical comparison of redirect systems across major platforms.
+
+## Core Redirect Concepts
+
+### Wildcards and Pattern Matching
+
+Most platforms support capturing dynamic URL segments and reusing them in the destination:
+
+- **Wildcards**: Match variable parts of URLs
+- **Capture variables**: Store matched content for reuse
+- **Status codes**: Control browser and SEO behavior
+
+### Common Status Codes
+
+- **301**: Permanent redirect - tells search engines the content has moved permanently
+- **302**: Temporary redirect - indicates content has moved temporarily
+- **200**: Rewrite - serves different content without changing the URL in the browser
+
+## Platform-Specific Implementations
+
+### Netlify
+
+**Configuration file:** `netlify.toml`
+
+**Basic redirect:**
+
+```toml
+[[redirects]]
+from = "/old-path/*"
+to = "/new-path/:splat"
+status = 302
+```
+
+**Key features:**
+- Uses `*` as wildcard in source path
+- Uses `:splat` to insert captured content in destination
+- Limited to one wildcard per rule
+- Supports rewrites with `status = 200`
+
+**Version-specific rewrite (SPA routing):**
+
+```toml
+[[redirects]]
+from = "/docs/v2.11/*"
+to = "/docs/v2.11/:splat"
+status = 200
+```
+
+**Pros:** Simple TOML syntax, integrated with deployment, automatic query parameter preservation  
+**Cons:** One wildcard per rule, limited regex support
+
+### Vercel
+
+**Configuration file:** `vercel.json`
+
+**Basic redirect:**
+
+```json
+{
+  "redirects": [
+    {
+      "source": "/old-path/:path*",
+      "destination": "/new-path/:path*",
+      "permanent": false
+    }
+  ]
+}
+```
+
+**Key features:**
+- Uses `:parameter*` for wildcards (named captures)
+- Supports multiple wildcards per rule
+- JSON configuration format
+
+**Advanced pattern with multiple captures:**
+
+```json
+{
+  "redirects": [
+    {
+      "source": "/docs/:version/:path*",
+      "destination": "/documentation/:version/:path*",
+      "permanent": false
+    }
+  ]
+}
+```
+
+**Pros:** Multiple wildcards, named parameters, flexible pattern matching  
+**Cons:** More verbose JSON syntax
+
+### Apache
+
+**Configuration file:** `.htaccess`
+
+**Basic redirect:**
+
+```apache
+RewriteEngine On
+RewriteRule ^old-path/(.*)$ /new-path/$1 [R=302,L]
+```
+
+**Key features:**
+- Full regex support with `(.*)` pattern
+- Uses `$1`, `$2`, etc. for captured groups
+- Requires `mod_rewrite` module
+
+**Complex version redirect:**
+
+```apache
+RewriteEngine On
+RewriteCond %{REQUEST_URI} ^/docs/v([0-9]+\.[0-9]+)/(.*)$
+RewriteRule ^.*$ /docs/current/%2 [R=302,L]
+```
+
+**Pros:** Powerful regex, widely used, extensive documentation  
+**Cons:** Complex syntax, steeper learning curve, requires server module
+
+### Nginx
+
+**Configuration file:** `nginx.conf` or site configuration
+
+**Basic redirect:**
+
+```nginx
+rewrite ^/old-path/(.*)$ /new-path/$1 redirect;
+```
+
+**Key features:**
+- Full regex support
+- Uses `$1`, `$2`, etc. for captured groups
+- Fast performance
+
+**Permanent redirect:**
+
+```nginx
+rewrite ^/old-path/(.*)$ /new-path/$1 permanent;
+```
+
+**Conditional redirect:**
+
+```nginx
+location /docs {
+    if ($request_uri ~ ^/docs/v[0-9.]+/(.*)$) {
+        rewrite ^.*$ /docs/current/$1 redirect;
+    }
+}
+```
+
+**Pros:** High performance, powerful regex, clean syntax  
+**Cons:** Requires server configuration access, reloads needed for changes
+
+### AWS CloudFront / Lambda@Edge
+
+**Configuration:** Lambda@Edge functions
+
+**Basic redirect function:**
+
+```javascript
+exports.handler = async (event) => {
+  const request = event.Records[0].cf.request;
+  const oldPath = '/old-path/';
+  const newPath = '/new-path/';
+  
+  if (request.uri.startsWith(oldPath)) {
+    return {
+      status: '302',
+      statusDescription: 'Found',
+      headers: {
+        'location': [{
+          key: 'Location',
+          value: request.uri.replace(oldPath, newPath)
+        }]
+      }
+    };
+  }
+  
+  return request;
+};
+```
+
+**Key features:**
+- Full programmatic control
+- JavaScript/Python for redirect logic
+- Can inspect headers, cookies, query params
+- Edge execution for low latency
+
+**Pros:** Unlimited flexibility, scalable, can implement complex business logic  
+**Cons:** Requires AWS knowledge, more setup complexity, Lambda costs
+
+## Syntax Comparison
+
+| Platform | Config File | Wildcard Syntax | Capture Variable | Status Code | Regex Support |
+|----------|-------------|-----------------|------------------|-------------|---------------|
+| **Netlify** | `netlify.toml` | `*` | `:splat` | `status = 302` | Limited |
+| **Vercel** | `vercel.json` | `:path*` | `:path` | `permanent: false` | Named params |
+| **Apache** | `.htaccess` | `(.*)` | `$1` | `[R=302]` | Full regex |
+| **Nginx** | `nginx.conf` | `(.*)` | `$1` | `redirect` / `permanent` | Full regex |
+| **AWS** | Lambda/JS | Programmatic | Variables | In code | Programmatic |
+
+## Feature Comparison
+
+| Feature | Netlify | Vercel | Apache | Nginx | AWS |
+|---------|---------|--------|--------|-------|-----|
+| **Learning Curve** | Easy | Easy | Medium | Medium | Hard |
+| **Wildcards per rule** | 1 | Multiple | Unlimited | Unlimited | Unlimited |
+| **Regex support** | No | Limited | Full | Full | Full |
+| **Rewrites (200)** | ✅ Yes | ✅ Yes | ✅ Yes | ✅ Yes | ✅ Yes |
+| **Query preservation** | Automatic | Configurable | Manual | Manual | Manual |
+| **Server access needed** | ❌ No | ❌ No | ✅ Yes | ✅ Yes | ✅ Yes |
+| **Deploy-time config** | ✅ Yes | ✅ Yes | ❌ No | ❌ No | Partial |
+
+## Best Practices (Platform-Agnostic)
+
+### 1. Rule Order Matters
+
+Most platforms process redirects sequentially. Structure your rules from most specific to most general:
+
+1. Exact path redirects
+2. Specific pattern redirects
+3. Version/section redirects
+4. Catch-all redirects (last)
+
+### 2. Use Appropriate Status Codes
+
+- **301** for permanently moved content (SEO benefit)
+- **302** for temporary moves or version aliases
+- **200** for rewrites/SPA routing
+
+### 3. Preserve Query Parameters
+
+Ensure your redirect configuration preserves query strings when needed for:
+- Analytics tracking
+- User session data
+- Feature flags
+
+### 4. Test Before Production
+
+- Use staging/preview environments
+- Test with and without trailing slashes
+- Verify query parameter handling
+- Check redirect chains (avoid multiple hops)
+
+### 5. Monitor and Maintain
+
+- Log redirect hits for analysis
+- Review and clean up old redirects
+- Document redirect purposes
+- Set up alerts for high redirect rates
+
+## Choosing the Right Platform
+
+**Choose Netlify/Vercel if:**
+- You need simple, file-based configuration
+- Your redirects are straightforward patterns
+- You want integrated deployment workflows
+- Server access is not available
+
+**Choose Apache/Nginx if:**
+- You need complex regex patterns
+- You have server access
+- You're running on traditional hosting
+- You need maximum control
+
+**Choose AWS Lambda@Edge if:**
+- You need programmatic redirect logic
+- You require header/cookie inspection
+- You're already using AWS infrastructure
+- You need geo-based routing
+
+## Common Use Cases
+
+### Versioned Documentation
+
+Redirect old versions to current:
+
+**Netlify:**
+```toml
+[[redirects]]
+from = "/docs/v1/*"
+to = "/docs/current/:splat"
+status = 301
+```
+
+**Vercel:**
+```json
+{
+  "source": "/docs/v1/:path*",
+  "destination": "/docs/current/:path*",
+  "permanent": true
+}
+```
+
+### Domain Migration
+
+**Nginx:**
+```nginx
+server {
+    listen 80;
+    server_name old-domain.com;
+    return 301 https://new-domain.com$request_uri;
+}
+```
+
+### SPA Routing
+
+**Netlify:**
+```toml
+[[redirects]]
+from = "/*"
+to = "/index.html"
+status = 200
+```
+
+## Additional Resources
+
+- [Netlify Redirects Documentation](https://docs.netlify.com/routing/redirects/)
+- [Vercel Redirects Documentation](https://vercel.com/docs/project-configuration#redirects)
+- [Apache mod_rewrite Guide](https://httpd.apache.org/docs/current/mod/mod_rewrite.html)
+- [Nginx Rewrite Module](https://nginx.org/en/docs/http/ngx_http_rewrite_module.html)
+- [AWS Lambda@Edge Examples](https://docs.aws.amazon.com/AmazonCloudFront/latest/DeveloperGuide/lambda-examples.html)
