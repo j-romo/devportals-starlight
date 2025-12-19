@@ -1,36 +1,61 @@
 ---
-title: "Working with Redirects in Netlify: A Guide to Wildcards and Catch-Alls"
-description: "Understanding Netlify redirect patterns, wildcards, catch-alls, and how they compare to other platforms like Vercel, Apache, and Nginx"
+title: "Why Redirect Management is Critical for Developer Portals"
+description: "How implementing strategic redirect patterns became essential for maintaining our evolving documentation platform and supporting docs-as-code workflows"
 date: 2025-12-18
 authors:
   - name: Joaquin Romo
 tags:
-  - netlify
+  - developer-portals
   - redirects
-  - wildcards
-  - web-hosting
-  - documentation
+  - docs-as-code
+  - content-strategy
   - url-management
+  - netlify
 tableOfContents:
   minHeadingLevel: 2
   maxHeadingLevel: 2
 draft: true
 ---
 
-When deploying documentation sites or web applications on Netlify, understanding how to configure redirects properly is essential for maintaining URL structure, handling versioned content, and ensuring users land on the right pages. This guide explains the core concepts of Netlify redirects, with a focus on wildcard patterns and catch-all rules.
+When I started working on our developer portal migration, I didn't expect redirect configuration to become one of the most critical pieces of infrastructure. But as our documentation platform evolved—moving from legacy systems to a modern docs-as-code workflow—redirects became the safety net that prevented broken links and maintained trust with our developer community.
 
-## Understanding `*` and `:splat`
+## The Challenge: Documentation That Never Stops Evolving
 
-Netlify's redirect system uses a simple but powerful pattern-matching system for handling dynamic URL paths:
+Developer portals are living platforms. Unlike traditional documentation that might see quarterly updates, our portal changes constantly:
 
-### The Wildcard Pattern
+- **Weekly content updates** from multiple technical writers
+- **Monthly product releases** requiring new version branches
+- **Quarterly restructures** as products evolve and merge
+- **Annual migrations** between documentation platforms or frameworks
 
-- **`*` in the `from` path**: Acts as a wildcard that captures everything after that point in the URL
-- **`:splat` in the `to` path**: Inserts the content captured by the `*`
+Each change risks breaking existing URLs that developers have bookmarked, linked to in Stack Overflow answers, embedded in tutorials, or integrated into their CI/CD pipelines. A broken documentation link isn't just an inconvenience—it's a broken promise to developers who depend on stable reference material.
 
-### Example
+## Why Redirects Matter in Docs-as-Code
 
-In your `netlify.toml` file:
+The docs-as-code methodology brings tremendous benefits: version control, automated testing, collaborative editing through pull requests. But it also introduces new redirect challenges that traditional CMS platforms handled automatically:
+
+### 1. File-Based Routing Creates URL Coupling
+
+When documentation URLs map directly to file paths in your repository, renaming a file or reorganizing folders breaks URLs. In our migration from a legacy system to Astro Starlight, we couldn't just move files—we had to map every old URL to its new location.
+
+### 2. Version Management Requires Redirect Strategy
+
+Modern developer portals maintain multiple documentation versions simultaneously. When we deprecated v2.11 of our API docs, we needed to:
+- Redirect users from `/docs/v2.11/*` to `/docs/current/*`
+- Preserve the specific page they were viewing
+- Ensure search engine rankings transferred to the new URLs
+
+### 3. Content Restructuring Breaks Existing Links
+
+As our product matured, we reorganized documentation from technology-centric sections to use-case-driven guides. Hundreds of pages moved. Without redirect rules, every external link, bookmark, and integration would have returned 404s.
+
+## Redirect Strategies and Use Cases
+
+Understanding when and how to implement redirects is essential for documentation platforms. Here are the most common scenarios where redirect strategies become critical:
+
+### Pattern-Based Redirects for Version Management
+
+When maintaining multiple documentation versions, wildcard patterns allow you to handle entire version trees with single rules. Using Netlify's syntax (`*` and `:splat`), you can redirect complete sections:
 
 ```toml
 [[redirects]]
@@ -39,212 +64,138 @@ to = "/docs/current/:splat"
 status = 302
 ```
 
-**How it works:**
-- User visits: `/docs/v2.12/installation/guide.html`
-- The `*` captures: `installation/guide.html`
-- Redirects to: `/docs/current/installation/guide.html`
+This single rule handles hundreds of pages. When users visit `/docs/v2.12/installation/guide.html`, they're automatically redirected to `/docs/current/installation/guide.html`—preserving their specific destination while moving them to the current version.
 
-### Multiple Wildcards
+### Catch-All Redirects as Safety Nets
 
-Netlify only supports **one wildcard per redirect rule**. If you need more complex patterns, you'll need multiple redirect rules or use query parameters with `:splat` variations.
+Catch-all redirects handle any URL not matched by more specific patterns, acting as fallback handlers to prevent 404 errors:
 
-### When to Use This Pattern
-
-Use `*` and `:splat` when you need to:
-- Redirect an entire version or section while preserving the path structure
-- Alias old URLs to new locations
-- Consolidate multiple versions to a single current version
-
-## What Are CATCH ALLS?
-
-"Catch-all" redirects are rules placed at the end of your redirect configuration that handle any URLs not matched by previous, more specific rules. They act as fallback handlers.
-
-### Two Types of Catch-Alls
-
-**1. Version-specific catch-alls (rewrites):**
-
+**Version-specific catch-all (rewrite):**
 ```toml
 [[redirects]]
-from = "/docs/atlas/operator/v2.11/*"
-to = "/docs/atlas/operator/v2.11/:splat"
+from = "/docs/api/v2.11/*"
+to = "/docs/api/v2.11/:splat"
 status = 200
 ```
 
-- **Status 200**: This is a *rewrite*, not a redirect
-- The URL stays the same in the browser
-- Ensures proper internal routing for all pages within that version
+This rewrite (status 200) ensures proper internal routing for all pages within a specific version without changing the URL in the browser—essential for Single Page Application routing.
 
-**2. Global catch-alls (redirects):**
-
+**Global catch-all (redirect):**
 ```toml
 [[redirects]]
-from = "/docs/atlas/operator/*"
-to = "/docs/atlas/operator/current/:splat"
+from = "/docs/api/*"
+to = "/docs/api/current/:splat"
 ```
 
-- Redirects any unmatched paths to the current version
-- Acts as the ultimate fallback
-- Must be placed **last** in your configuration
+This redirects any unmatched paths to the current version, acting as our ultimate safety net.
 
-### Why Use Catch-Alls?
+## Lessons Learned: Redirect Strategy for Developer Portals
 
-- **Ensure no 404s**: Every URL pattern gets handled
-- **Version management**: Automatically route traffic from unversioned URLs
-- **Simplify configuration**: Reduces the need for explicit rules for every page
+### 1. Redirects Are Infrastructure, Not Afterthoughts
 
-## Redirect Configuration Best Practices
+Redirect planning should happen **before** you restructure content, not after. In our docs-as-code workflow, redirect configuration lives in version control alongside the content:
 
-### 1. Order Matters
+```
+docs-repo/
+├── src/content/
+├── netlify.toml  ← Redirect rules go here
+└── README.md
+```
 
-Netlify processes redirects **from top to bottom**. The first matching rule wins. Structure your rules like this:
+Every pull request that changes URLs should include corresponding redirect rules. This treats redirects as first-class infrastructure, reviewed and tested like any other code change.
 
-1. Specific page redirects
-2. Version alias redirects  
-3. Feature-specific redirects
-4. Version catch-alls (status 200)
+### 2. Order Matters: Specific Before General
+
+We learned this the hard way. Redirect platforms process rules sequentially—the first match wins. Our initial configuration had the global catch-all at the top, which meant specific redirects never triggered.
+
+**The correct structure:**
+1. Specific page redirects (exact matches)
+2. Version alias redirects
+3. Feature-specific patterns
+4. Version catch-alls (status 200 rewrites)
 5. Global catch-all (last resort)
 
-### 2. Status Codes
+### 3. Choose the Right Status Code
 
-- **301**: Permanent redirect (use for removed content)
-- **302**: Temporary redirect (use for version aliases)
-- **200**: Rewrite (URL doesn't change in browser)
+Understanding HTTP status codes became crucial:
+- **301 (Permanent)**: For content permanently moved or removed—tells search engines to update their indexes
+- **302 (Temporary)**: For version aliases that might change—preserves SEO for the original URL
+- **200 (Rewrite)**: For SPA routing—serves different content without changing the browser URL
 
-### 3. Query Parameters and Fragments
+We initially used 301 for everything, which hurt our SEO when we later needed to change redirect targets. Now we use 302 for version aliases and 301 only when content is truly gone forever.
 
-Use `:splat` variations for advanced patterns:
-- `:splat` - captures the path
-- Additional parameters can be preserved with proper configuration
+### 4. Test in Deploy Previews
 
-### 4. Testing
+Netlify's deploy preview feature became essential for testing redirects before production:
 
-Always test your redirects in a deploy preview before merging to production. Check:
-- Does the redirect go to the correct destination?
-- Is the status code correct?
-- Are query parameters preserved if needed?
-
-## Platform-Specific Redirect Comparison
-
-Different hosting platforms have their own redirect configuration systems. Here's how they compare:
-
-### Netlify
-
-**Configuration file:** `netlify.toml`
-
-Example redirect rule:
-
-```toml
-[[redirects]]
-from = "/old-path/*"
-to = "/new-path/:splat"
-status = 302
+```bash
+# Every PR gets a preview URL
+https://preview-branch-name--site-name.netlify.app
 ```
 
-**Pros:** Simple TOML syntax, supports rewrites, integrated with deployment  
-**Cons:** Limited to one wildcard per rule
+We created a redirect test checklist:
+- ✅ Does the redirect reach the correct destination?
+- ✅ Is the status code appropriate (301/302/200)?
+- ✅ Are query parameters preserved?
+- ✅ Does the redirect work from external referrers?
 
-### Vercel
+### 5. Monitor and Maintain
 
-**Configuration file:** `vercel.json`
+Redirects aren't set-and-forget. We monitor:
+- **404 rates**: Spikes indicate missing redirect rules
+- **Redirect hit counts**: Identify which old URLs still get traffic
+- **Redirect chains**: Ensure we don't have A→B→C patterns that slow page loads
 
-Example redirect rule in JSON format:
+## Choosing the Right Platform for Redirect Management
 
-```json
-{
-  "redirects": [
-    {
-      "source": "/old-path/:path*",
-      "destination": "/new-path/:path*",
-      "permanent": false
-    }
-  ]
-}
-```
+Different hosting platforms handle redirects differently. The platform I work with uses file-based configuration that lives in version control alongside the documentation source. This approach fits naturally into docs-as-code workflows:
 
-**Pros:** JSON format, supports named parameters, multiple wildcards  
-**Cons:** More verbose syntax
+- **Configuration as code**: Redirect rules are reviewed in pull requests like any other change
+- **Deploy preview testing**: Test redirects before they reach production
+- **No server management**: Focus on documentation, not infrastructure maintenance
+- **Readable syntax**: Technical writers can understand and modify redirect rules
 
-### Apache
+Other platforms offer different tradeoffs—more powerful regex capabilities, multiple wildcards per rule, or programmatic control through serverless functions. The "best" platform depends on your specific needs:
 
-**Configuration file:** `.htaccess`
+- **Simple docs-as-code workflow?** File-based configuration platforms (Netlify, Vercel) work well
+- **Complex pattern matching needs?** Traditional servers (Apache/Nginx) offer full regex power
+- **High-scale distributed systems?** Cloud solutions (AWS CloudFront/Lambda@Edge) provide programmability
 
-Example using RewriteRule:
+The key is choosing a platform that matches your team's workflow and technical capabilities, not necessarily the most feature-rich option.
 
-```apache
-RewriteEngine On
-RewriteRule ^old-path/(.*)$ /new-path/$1 [R=302,L]
-```
+> 📚 **Want the technical details?** Check out our comprehensive [Redirect Configuration Guide](/frameworks-and-tools/redirect-configuration-guide/) comparing syntax, features, and implementation across platforms.
 
-**Pros:** Powerful regex support, widely used  
-**Cons:** Complex syntax, requires mod_rewrite module
+## The Impact: What Good Redirects Enable
 
-### Nginx
+Implementing a comprehensive redirect strategy transformed how we approach documentation:
 
-**Configuration file:** `nginx.conf` or site config
+- **Restructure content confidently** - reorganize pages, merge sections, and deprecate versions without breaking existing links
+- **Faster iteration** - no coordination needed with external teams who've linked to our docs
+- **Better developer trust** - users always land on relevant content, even from years-old bookmarks
+- **Sustainable evolution** - the documentation can grow and change without accumulating technical debt
+- **True docs-as-code** - content changes flow through Git without worrying about URL stability
 
-Example rewrite directive:
+## Key Takeaways for Developer Portal Teams
 
-```nginx
-rewrite ^/old-path/(.*)$ /new-path/$1 redirect;
-```
+If you're building or migrating a developer portal, treat redirects as critical infrastructure:
 
-**Pros:** Fast, efficient, powerful regex  
-**Cons:** Requires server configuration access
+1. **Plan redirects before restructuring** - don't wait until after migration
+2. **Version control your redirect config** - redirects are code, not server config
+3. **Use wildcard patterns** - one rule can handle hundreds of URLs
+4. **Implement catch-alls** - ensure users never hit 404s
+5. **Test in preview environments** - catch problems before production
+6. **Monitor redirect metrics** - 404 rates, redirect hits, chains
+7. **Choose platforms that support docs-as-code** - file-based config beats UI-based config
+8. **Document your redirect strategy** - future team members will thank you
 
-### AWS CloudFront/S3
+## Looking Forward
 
-**Configuration:** Lambda@Edge functions or S3 routing rules
+Redirect management isn't glamorous work. It's invisible when it works correctly—which is exactly the point. Developers shouldn't think about redirects. They should just land on the page they need, regardless of which old URL they clicked.
 
-Example Lambda@Edge function:
+As our developer portal continues evolving—and it will never stop evolving—redirects remain the safety net that lets us improve documentation without breaking trust. They're the infrastructure that makes docs-as-code workflows sustainable at scale.
 
-```javascript
-exports.handler = async (event) => {
-  const request = event.Records[0].cf.request;
-  if (request.uri.startsWith('/old-path/')) {
-    return {
-      status: '302',
-      headers: {
-        'location': [{
-          value: request.uri.replace('/old-path/', '/new-path/')
-        }]
-      }
-    };
-  }
-  return request;
-};
-```
+For developer portals, broken links aren't just bad UX—they're broken promises. Redirect strategies ensure that when we promise stable documentation, we deliver.
 
-**Pros:** Highly scalable, programmable  
-**Cons:** More complex setup, requires AWS knowledge
+---
 
-## Syntax Comparison Table
-
-| Platform | Config File | Wildcard Syntax | Capture Variable | Status Code | Regex Support |
-|----------|-------------|-----------------|------------------|-------------|---------------|
-| **Netlify** | `netlify.toml` | `*` | `:splat` | `status = 302` | Limited |
-| **Vercel** | `vercel.json` | `:path*` | `:path` | `permanent: false` | Named params |
-| **Apache** | `.htaccess` | `(.*)` | `$1` | `[R=302]` | Full regex |
-| **Nginx** | `nginx.conf` | `(.*)` | `$1` | `redirect` / `permanent` | Full regex |
-| **AWS** | Lambda/XML | Custom JS/XML | Custom variables | In code/config | Programmable |
-
-## Key Differences
-
-| Feature | Netlify | Vercel | Apache/Nginx |
-|---------|---------|--------|--------------|
-| **Learning Curve** | Easy | Easy | Medium-Hard |
-| **Wildcards per rule** | 1 | Multiple | Unlimited |
-| **Rewrites (status 200)** | ✅ Yes | ✅ Yes | ✅ Yes |
-| **Query preservation** | Automatic | Configurable | Manual |
-| **Server access required** | ❌ No | ❌ No | ✅ Yes |
-
-## Conclusion
-
-Understanding redirect patterns is crucial for maintaining a professional web presence. Whether you're managing versioned documentation, restructuring URLs, or migrating content, the `*` and `:splat` pattern in Netlify provides a straightforward way to handle dynamic paths.
-
-Remember:
-- Always place more specific rules before general ones
-- Use catch-alls as your safety net
-- Test redirects in deploy previews
-- Choose the right status code for your use case
-
-While Netlify's redirect system is simpler than regex-based alternatives like Apache or Nginx, it's powerful enough for most documentation and application needs. If you need more complex patterns, consider combining multiple rules or exploring other platforms that support multiple wildcards and named parameters.
+*Building a developer portal or migrating documentation platforms? I'd love to hear about your redirect challenges and strategies. Connect with me on [LinkedIn](https://www.linkedin.com/company/devportals-tech) to continue the conversation.*
