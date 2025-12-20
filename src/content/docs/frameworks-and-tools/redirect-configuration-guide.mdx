@@ -198,13 +198,13 @@ exports.handler = async (event) => {
 
 ## Syntax Comparison
 
-| Platform | Config File | Wildcard Syntax | Capture Variable | Status Code | Regex Support |
-|----------|-------------|-----------------|------------------|-------------|---------------|
-| **Netlify** | `netlify.toml` | `*` | `:splat` | `status = 302` | Limited |
-| **Vercel** | `vercel.json` | `:path*` | `:path` | `permanent: false` | Named params |
-| **Apache** | `.htaccess` | `(.*)` | `$1` | `[R=302]` | Full regex |
-| **Nginx** | `nginx.conf` | `(.*)` | `$1` | `redirect` / `permanent` | Full regex |
-| **AWS** | Lambda/JS | Programmatic | Variables | In code | Programmatic |
+| Feature | Netlify | Vercel | Apache | Nginx | AWS |
+|---------|---------|--------|--------|-------|-----|
+| **Config File** | `netlify.toml` | `vercel.json` | `.htaccess` | `nginx.conf` | Lambda/JS |
+| **Wildcard Syntax** | `*` | `:path*` | `(.*)` | `(.*)` | Programmatic |
+| **Capture Variable** | `:splat` | `:path` | `$1` | `$1` | Variables |
+| **Status Code** | `status = 302` | `permanent: false` | `[R=302]` | `redirect` / `permanent` | In code |
+| **Regex Support** | Limited | Named params | Full regex | Full regex | Programmatic |
 
 ## Feature Comparison
 
