@@ -9,6 +9,9 @@ tags:
   - documentation
   - configuration
   - navigation
+tableOfContents:
+  minHeadingLevel: 2
+  maxHeadingLevel: 2
 ---
 
 While building DevPortals.tech, I ran into a common documentation site challenge: how do you organize sidebar navigation when you want some content to appear in a specific order (like overview pages) while still automatically including new files as you create them?

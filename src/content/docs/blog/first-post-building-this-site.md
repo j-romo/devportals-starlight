@@ -8,6 +8,9 @@ tags:
   - astro-starlight
   - developer-portals
   - migration
+tableOfContents:
+  minHeadingLevel: 2
+  maxHeadingLevel: 2
 ---
 
 As a senior technical writer who's spent years managing enterprise documentation platforms, I've seen the pain points that drive teams to migrate from proprietary solutions to open-source alternatives.

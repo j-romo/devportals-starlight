@@ -10,6 +10,9 @@ tags:
   - content-strategy
   - astro-starlight
   - workflow
+tableOfContents:
+  minHeadingLevel: 2
+  maxHeadingLevel: 2
 ---
 
 Building devportals.tech has been an exercise in practicing what I preach about documentation engineering. One of the most impactful decisions I made early was leveraging MDX frontmatter not just for basic metadata, but as the foundation for scalable content workflows. Here's how it's working in practice.

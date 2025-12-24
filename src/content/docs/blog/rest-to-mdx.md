@@ -10,6 +10,9 @@ tags:
   - reStructuredText
   - developer-portals
   - migration
+tableOfContents:
+  minHeadingLevel: 2
+  maxHeadingLevel: 2
 ---
 
 Documentation frameworks are not just technical choices — they reflect **cultural shifts** in how we think about developer experience.  

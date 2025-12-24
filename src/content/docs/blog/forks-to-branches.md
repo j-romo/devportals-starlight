@@ -11,6 +11,9 @@ tags:
   - forks
   - branching-strategy
   - migration
+tableOfContents:
+  minHeadingLevel: 2
+  maxHeadingLevel: 2
 ---
 
 As part of a GitHub working group within a 50-person technical writing team, I recently helped lead our transition from a fork-based workflow to a centralized branching strategy. This shift simplified our collaboration model and reduced friction across four sub-teams. Here's what we learned.
