@@ -14,6 +14,9 @@ export default defineConfig({
 			logo: {
 				src: './src/assets/devportals-logo.png',
 			},
+			components: {
+				Header: './src/components/Header.astro',
+			},
 			social: [
 				{
 					icon: 'github',
