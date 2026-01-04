@@ -1,0 +1,241 @@
+---
+title: "Building a GitHub Contribution Graph with Next.js Server Components"
+description: "How to integrate the GitHub GraphQL API with Next.js 14 Server Components to display contribution activity across multiple accounts"
+date: 2026-01-01
+authors:
+  - name: Joaquin Romo
+tags:
+  - nextjs
+  - typescript
+  - github
+  - graphql
+  - server-components
+  - portfolio
+  - api-integration
+  - react
+tableOfContents:
+  minHeadingLevel: 2
+  maxHeadingLevel: 2
+---
+
+When building a portfolio, showing your GitHub activity tells a story about your consistency, the technologies you work with, and how you balance personal and professional projects. In this guide, I walk you through building a production-ready GitHub contribution graph using Next.js 14 Server Components and TypeScript.
+
+## Why Server Components?
+
+Unlike client-side rendering, Server Components allow us to fetch data directly on the server, keeping our GitHub API token secure and improving initial page load performance. This is especially important for portfolio sites where first impressions matter.
+
+{/* excerpt */}
+
+## The Technical Approach
+
+### 1. Setting Up GitHub's GraphQL API
+
+GitHub's GraphQL API is more efficient than the REST API for fetching contribution data. Here's why:
+
+- **Single Request**: Get all the data you need in one query
+- **Precise Fields**: Request only what you need, reducing payload size
+- **Strongly Typed**: GraphQL schemas provide built-in documentation
+
+First, create a Personal Access Token with `read:user` scope:
+
+```bash
+# Visit https://github.com/settings/tokens
+# Generate a new token with read:user scope
+# Store it in .env.local
+GITHUB_TOKEN=ghp_your_token_here
+```
+
+### 2. TypeScript Types for Type Safety
+
+One of the keys to maintainable code is proper typing. Here's our contribution data structure:
+
+```typescript
+interface ContributionDay {
+  date: string;
+  contributionCount: number;
+  contributionLevel: 'NONE' | 'FIRST_QUARTILE' | 
+    'SECOND_QUARTILE' | 'THIRD_QUARTILE' | 'FOURTH_QUARTILE';
+}
+```
+
+GitHub provides contribution levels in quartiles, which we'll map to color intensities in our visualization.
+
+### 3. The Fetch Function
+
+Here's the core function that talks to GitHub's API:
+
+```typescript
+export async function fetchGitHubContributions(
+  username: string
+): Promise<ContributionCalendar | null> {
+  const query = `
+    query($username: String!) {
+      user(login: $username) {
+        contributionsCollection {
+          contributionCalendar {
+            totalContributions
+            weeks {
+              contributionDays {
+                date
+                contributionCount
+                contributionLevel
+              }
+            }
+          }
+        }
+      }
+    }
+  `;
+
+  const response = await fetch('https://api.github.com/graphql', {
+    method: 'POST',
+    headers: {
+      'Authorization': `Bearer \${process.env.GITHUB_TOKEN}`,
+      'Content-Type': 'application/json',
+    },
+    body: JSON.stringify({ query, variables: { username } }),
+    // ISR: Cache for 1 hour
+    next: { revalidate: 3600 },
+  });
+
+  // Error handling omitted for brevity
+  const result = await response.json();
+  return result.data.user.contributionsCollection.contributionCalendar;
+}
+```
+
+The `next: { revalidate: 3600 }` option enables Incremental Static Regeneration (ISR), caching the data for one hour. This reduces API calls and improves performance.
+
+### 4. Supporting Multiple Accounts
+
+Many developers have separate personal and work GitHub accounts. Let's aggregate them:
+
+```typescript
+export async function aggregateContributions(
+  usernames: string[]
+): Promise<{ totalContributions: number; byAccount: Record<string, number> }> {
+  const results = await Promise.allSettled(
+    usernames.map(username => fetchGitHubContributions(username))
+  );
+
+  let totalContributions = 0;
+  const byAccount: Record<string, number> = {};
+
+  results.forEach((result, index) => {
+    if (result.status === 'fulfilled' && result.value) {
+      const count = result.value.totalContributions;
+      byAccount[usernames[index]] = count;
+      totalContributions += count;
+    }
+  });
+
+  return { totalContributions, byAccount };
+}
+```
+
+Using `Promise.allSettled` ensures that if one account fails, we still get data from the others.
+
+### 5. The Visual Component
+
+Now for the fun part—rendering the contribution calendar:
+
+```tsx
+export default async function GitHubContributions({ 
+  username, 
+  days = 90 
+}: GitHubContributionsProps) {
+  const usernames = Array.isArray(username) ? username : [username];
+  const aggregated = await aggregateContributions(usernames);
+  const primaryCalendar = await fetchGitHubContributions(usernames[0]);
+  
+  const recentDays = getRecentContributions(primaryCalendar, days);
+  const weeks = Math.ceil(recentDays.length / 7);
+
+  return (
+    <div className="grid gap-1" style={{
+      gridTemplateColumns: `repeat(\${weeks}, minmax(10px, 1fr))`,
+      gridTemplateRows: 'repeat(7, minmax(10px, 1fr))',
+      gridAutoFlow: 'column',
+    }}>
+      {recentDays.map((day) => (
+        <div
+          key={day.date}
+          className={`w-3 h-3 rounded-sm \${levelColors[day.contributionLevel]}`}
+          title={`\${day.contributionCount} contributions`}
+        />
+      ))}
+    </div>
+  );
+}
+```
+
+The CSS Grid layout automatically flows contributions from top to bottom, left to right, just like GitHub's native visualization.
+
+## Performance Optimizations
+
+1. **Server-Side Rendering** - Data fetched before the page reaches the client
+2. **ISR Caching** - One-hour cache reduces API calls by 99%
+3. **Minimal JavaScript** - Server Component means zero client-side JS for this feature
+4. **Optimized Query** - GraphQL fetches only required fields
+
+## Dark Mode Support
+
+Using Tailwind's dark mode variants:
+
+```typescript
+const levelColors = {
+  NONE: 'bg-neutral-100 dark:bg-neutral-800',
+  FIRST_QUARTILE: 'bg-green-200 dark:bg-green-900',
+  // ... more levels
+};
+```
+
+## Error Handling
+
+Always handle API failures gracefully:
+
+```typescript
+if (!primaryCalendar) {
+  return (
+    <div className="p-4 border rounded-lg">
+      <p className="text-sm text-neutral-600">
+        Unable to load contribution data. 
+        Please check your GitHub token configuration.
+      </p>
+    </div>
+  );
+}
+```
+
+## Lessons Learned
+
+1. **GraphQL > REST for Nested Data** - One query beats multiple REST calls
+2. **Server Components Are Powerful** - Keep secrets secure, improve performance
+3. **Type Safety Matters** - TypeScript caught several bugs during development
+4. **Cache Strategically** - ISR balances freshness with performance
+5. **Fail Gracefully** - Always provide fallback UI for API errors
+
+As a Documentation Engineer, building this feature taught me how developers actually *use* our API docs. 
+The disconnect between reference documentation and real-world implementation patterns became clear, a lesson I'll carry into future docs work. 
+When you write the integration guide yourself, you discover which concepts need more explanation, which error messages are confusing, and where examples would save hours of debugging.
+
+## Future Enhancements
+
+Some ideas for taking this further:
+
+- **Interactive Tooltips** - Show detailed contribution breakdown on hover
+- **Commit Message Analysis** - Display most-used technologies/keywords
+- **Contribution Streaks** - Highlight longest streak of consecutive days
+- **Organization Contributions** - Include work from private repos (with proper scoping)
+
+## Conclusion
+
+This implementation demonstrates the power of Next.js Server Components for building interactive, data-driven portfolio features. By combining GitHub's GraphQL API with TypeScript and modern React patterns, we've created a performant, maintainable solution that showcases both engineering and content skills.
+
+---
+
+**Tech Stack**: Next.js 14, TypeScript, Tailwind CSS, GitHub GraphQL API
+
+**Live Demo**: [View on my portfolio](https://portfolio.devportals.tech/#github)
+
+**Source Code**: [github.ts on GitHub](https://github.com/j-romo/nextjs-portfolio/blob/main/app/lib/github.ts)
