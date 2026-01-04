@@ -15,12 +15,15 @@ tags:
   - portfolio
 tableOfContents:
   minHeadingLevel: 2
-  maxHeadingLevel: 3
+  maxHeadingLevel: 2
 ---
 
 ## Introduction
 
-As a documentation engineer and technical writer, I needed a way to showcase both my technical writing work and my development projects. I had already built a documentation site using Astro and Starlight at `devportals.tech`, and I wanted to add my Next.js portfolio site without disrupting the existing architecture. This post walks through the technical decisions, implementation challenges, and solutions I encountered while integrating these two separate applications into a cohesive experience.
+As a documentation engineer and technical writer, I needed a way to showcase both my technical writing work and my development projects. 
+I had already built a documentation site using Astro and Starlight at `devportals.tech`, and I wanted to add my Next.js portfolio site without disrupting the existing architecture. 
+
+This post walks through the technical decisions, implementation challenges, and solutions I encountered while integrating these two separate applications into a cohesive experience.
 
 ## The Challenge: Two Sites, One Domain
 
@@ -298,6 +301,34 @@ I validated the implementation across multiple dimensions:
 - ✅ Desktop: Full navigation visible
 - ✅ Tablet: Portfolio link present
 - ✅ Mobile: Falls back to Starlight's mobile menu (portfolio link hidden)
+
+## Bonus: Adding a "Docs" Navigation Link
+
+Once I had the Header component override working for Portfolio, I realized there was a UX gap: users on the landing page had no clear way to navigate to the documentation sections without clicking on specific content cards. The site logo redirected to the landing page, but there was no "Docs" entry point in the navigation bar.
+
+Since I'd already invested the effort to understand and override the Header component, adding another navigation link was straightforward—just another anchor element with the same styling:
+
+```astro
+<a href="/about/" class="nav-link">
+  Docs
+</a>
+<a href="https://portfolio.devportals.tech" target="_blank" rel="noopener noreferrer" class="nav-link">
+  Portfolio
+</a>
+```
+
+The "Docs" link points to `/about/`, which serves as a natural entry point—introducing who I am and what the site covers before diving into technical content.
+
+**Navigation structure after enhancement:**
+- Social icons
+- Divider
+- **Docs** (new!)
+- **Portfolio** (with external link indicator ↗)
+- **Blog** (from starlight-blog plugin)
+- Theme toggle
+- Language selector
+
+This change demonstrates an important principle: **once you understand a system deeply enough to extend it, additional enhancements become significantly easier**. The initial investment in learning Starlight's component architecture paid dividends when identifying and fixing a second UX issue.
 
 ## Maintenance Considerations
 
