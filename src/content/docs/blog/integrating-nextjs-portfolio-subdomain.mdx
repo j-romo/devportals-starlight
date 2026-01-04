@@ -1,0 +1,373 @@
+---
+title: "Integrating a Next.js Portfolio as a Subdomain: A Technical Deep Dive"
+description: "How I integrated my Next.js portfolio site as a subdomain and customized Starlight's navigation component to create a cohesive multi-site experience"
+date: 2026-01-03
+authors:
+  - name: Joaquin Romo
+tags:
+  - nextjs
+  - astro
+  - starlight
+  - vercel
+  - dns
+  - component-override
+  - architecture
+  - portfolio
+tableOfContents:
+  minHeadingLevel: 2
+  maxHeadingLevel: 3
+---
+
+## Introduction
+
+As a documentation engineer and technical writer, I needed a way to showcase both my technical writing work and my development projects. I had already built a documentation site using Astro and Starlight at `devportals.tech`, and I wanted to add my Next.js portfolio site without disrupting the existing architecture. This post walks through the technical decisions, implementation challenges, and solutions I encountered while integrating these two separate applications into a cohesive experience.
+
+## The Challenge: Two Sites, One Domain
+
+I had two distinct applications:
+1. **Main documentation site**: Built with Astro + Starlight, hosted at `devportals.tech`
+2. **Portfolio site**: Built with Next.js, deployed separately on Vercel
+
+The question was: how do I connect these two sites in a way that feels unified to visitors while maintaining deployment independence?
+
+## Architecture Decision: Subdomain vs. Subdirectory
+
+I considered three approaches:
+
+### Option 1: Separate Domain
+- **Pros**: Complete independence, simplest DNS setup
+- **Cons**: Weakens brand cohesion, splits SEO authority, requires users to remember two URLs
+
+### Option 2: Subdirectory (`devportals.tech/portfolio`)
+- **Pros**: Single domain, better for SEO, unified URL structure
+- **Cons**: Requires complex proxy/rewrite rules, complicates deployments, potential routing conflicts
+
+### Option 3: Subdomain (`portfolio.devportals.tech`)
+- **Pros**: Deployment independence, clean separation, simple DNS, maintains brand
+- **Cons**: Splits SEO slightly, requires DNS configuration
+
+**I chose the subdomain approach** because it provided the best balance of deployment flexibility and brand cohesion. Each application can be deployed independently, use different frameworks, and scale separately while still feeling like part of the same ecosystem.
+
+## Infrastructure Setup: DNS and Vercel Configuration
+
+### Setting Up the Subdomain in Vercel
+
+The infrastructure setup was straightforward but required coordination between both Vercel projects:
+
+1. **Main site** (`devportals.tech`): Already configured in Vercel project #1
+2. **Portfolio site**: Deployed to Vercel project #2
+
+In the portfolio project's Vercel dashboard:
+1. Navigate to **Settings** → **Domains**
+2. Add `portfolio.devportals.tech` as a custom domain
+3. Vercel provides DNS records to configure
+
+### DNS Configuration
+
+In my DNS provider (where I registered `devportals.tech`), I added:
+
+```
+Type: CNAME
+Name: portfolio
+Value: cname.vercel-dns.com
+TTL: Auto
+```
+
+This CNAME record directs `portfolio.devportals.tech` to Vercel's infrastructure, which then routes to the correct project based on domain configuration.
+
+**Pro tip**: DNS propagation can take up to 48 hours, but typically completes within an hour. Use `dig portfolio.devportals.tech` to verify the CNAME record has propagated.
+
+## Navigation Integration: The Real Challenge
+
+With the infrastructure in place, the next challenge was making the portfolio accessible from the main site's navigation. Users shouldn't have to manually type in a subdomain—they should see a clear "Portfolio" link in the navigation bar.
+
+### The Blog Plugin's Automatic Navigation
+
+Before diving into the Portfolio implementation, it's worth noting that I was already using the `starlight-blog` plugin, which adds a "Blog" link to the navigation automatically. This plugin integrates seamlessly with Starlight's architecture:
+
+```javascript
+// astro.config.mjs
+plugins: [
+  starlightBlog({
+    metrics: {
+      readingTime: true,
+    },
+  }),
+],
+```
+
+The blog plugin has **built-in permission** to modify Starlight's navigation—it hooks into Starlight's plugin API and injects its navigation link without requiring any manual component overrides. This is the "blessed path" for extending Starlight: plugins can register navigation items, add routes, and modify behavior through official APIs.
+
+**But what if you need to add something custom that doesn't have a plugin?** That's where component overrides come in. Unlike the blog plugin, my Portfolio site wasn't integrated via a Starlight plugin—it's a completely separate Next.js application. To add a Portfolio link, I needed to go **beyond the plugin system** and manually override the Header component.
+
+This distinction highlights an important architectural concept: **official plugins get convenient APIs, custom modifications require deeper integration**.
+
+### Understanding Starlight's Component Architecture
+
+Starlight (the Astro documentation theme I'm using) has a modular component system. The header navigation is controlled by the `Header.astro` component, which orchestrates several subcomponents:
+- `SiteTitle` - Logo and site name
+- `Search` - Search functionality
+- `SocialIcons` - Social media links
+- `ThemeSelect` - Light/dark mode toggle
+- `LanguageSelect` - Language switcher
+
+To add a custom "Portfolio" link, I needed to override the Header component.
+
+### Research Phase: Reading the Documentation
+
+First, I consulted the [Starlight overrides documentation](https://starlight.astro.build/guides/overriding-components/). Key findings:
+
+1. **Component overrides** are configured in `astro.config.mjs` via the `components` option
+2. You can **reuse built-in components** while adding custom elements
+3. The Header component doesn't expose **slots** for injection—you must replace it entirely
+
+I initially tried using a slot-based approach:
+
+```astro
+<!-- This didn't work - Header doesn't support slots -->
+<Default {...Astro.props}>
+  <div slot="before-social">
+    <a href="https://portfolio.devportals.tech">Portfolio</a>
+  </div>
+</Default>
+```
+
+After testing without success, I checked the [source code](https://github.com/withastro/starlight/blob/main/packages/starlight/components/Header.astro) and confirmed: **the Header component must be completely replaced**.
+
+### Implementation: Creating a Custom Header Component
+
+I created `src/components/Header.astro` with the full Header implementation:
+
+```astro
+---
+import config from 'virtual:starlight/user-config';
+import LanguageSelect from 'virtual:starlight/components/LanguageSelect';
+import Search from 'virtual:starlight/components/Search';
+import SiteTitle from 'virtual:starlight/components/SiteTitle';
+import SocialIcons from 'virtual:starlight/components/SocialIcons';
+import ThemeSelect from 'virtual:starlight/components/ThemeSelect';
+
+const shouldRenderSearch =
+  config.pagefind || config.components.Search !== '@astrojs/starlight/components/Search.astro';
+---
+
+<div class="header">
+  <div class="title-wrapper sl-flex">
+    <SiteTitle />
+  </div>
+  <div class="sl-flex print:hidden">
+    {shouldRenderSearch && <Search />}
+  </div>
+  <div class="sl-hidden md:sl-flex print:hidden right-group">
+    <div class="sl-flex social-icons">
+      <SocialIcons />
+    </div>
+    <span class="divider"></span>
+    <a href="https://portfolio.devportals.tech" target="_blank" rel="noopener noreferrer" class="portfolio-link">
+      Portfolio
+    </a>
+    <ThemeSelect />
+    <LanguageSelect />
+  </div>
+</div>
+```
+
+**Key implementation details:**
+
+1. **Import all necessary components** from Starlight's virtual modules
+2. **Preserve the search logic** - check if Pagefind is enabled
+3. **Add the Portfolio link** in the right-group section
+4. **Include a visual divider** to separate sections
+5. **Maintain responsive behavior** - hide on mobile with `sl-hidden md:sl-flex`
+
+### Styling the Portfolio Link
+
+The styling needed to match Starlight's design system:
+
+```astro
+<style>
+  @layer starlight.core {
+    .portfolio-link {
+      color: var(--sl-color-text-accent);
+      text-decoration: none;
+      font-weight: 600;
+      font-size: var(--sl-text-base);
+    }
+    .portfolio-link:hover {
+      color: var(--sl-color-text-accent);
+      text-decoration: underline;
+    }
+    .divider {
+      height: 2rem;
+      border-inline-end: 1px solid var(--sl-color-gray-5);
+    }
+    .social-icons {
+      gap: 1rem;
+      align-items: center;
+    }
+    /* ... rest of original Header styles ... */
+  }
+</style>
+```
+
+**CSS considerations:**
+
+- Use Starlight's CSS custom properties (`--sl-color-text-accent`) for theme consistency
+- Wrap styles in `@layer starlight.core` to maintain specificity
+- Match the Blog link's styling for visual consistency
+- Use `var(--sl-text-base)` for font size parity
+
+### Registering the Component Override
+
+In `astro.config.mjs`, I registered the custom component:
+
+```javascript
+export default defineConfig({
+  integrations: [
+    starlight({
+      title: 'DevPortals.Tech',
+      components: {
+        Header: './src/components/Header.astro',
+      },
+      // ... rest of config
+    }),
+  ],
+});
+```
+
+## Troubleshooting Journey
+
+### Issue #1: Slot Approach Didn't Work
+
+**Problem**: Initial attempt to use slots resulted in no visible changes.
+
+**Investigation**: 
+- Checked browser dev tools - component wasn't rendering
+- Reviewed Starlight docs - no mention of Header slots
+- Examined source code - confirmed Header doesn't use slots
+
+**Solution**: Complete component replacement instead of slot injection.
+
+### Issue #2: Double Dividers
+
+**Problem**: Two vertical dividers appeared between social icons and Portfolio link.
+
+**Root cause**: The original `.social-icons::after` pseudo-element was still creating a divider, and I added another `<span class="divider">`.
+
+**Solution**: Removed the `::after` pseudo-element CSS rule:
+
+```css
+/* Removed this */
+.social-icons::after {
+  content: '';
+  height: 2rem;
+  border-inline-end: 1px solid var(--sl-color-gray-5);
+}
+
+/* Kept the standalone divider element */
+.divider {
+  height: 2rem;
+  border-inline-end: 1px solid var(--sl-color-gray-5);
+}
+```
+
+### Issue #3: Cramped Layout
+
+**Problem**: Portfolio link was initially placed inside the `social-icons` div, causing cramped spacing.
+
+**Solution**: Moved the link outside the social icons container into the `right-group` parent, allowing proper flex gap spacing.
+
+## Testing and Validation
+
+I validated the implementation across multiple dimensions:
+
+### Visual Testing
+- ✅ Portfolio link displays on desktop viewports
+- ✅ Link hides on mobile (uses mobile menu instead)
+- ✅ Color matches Blog link and theme accent
+- ✅ Spacing is consistent with other nav elements
+- ✅ Single divider between sections
+
+### Functional Testing
+- ✅ Link opens in new tab (`target="_blank"`)
+- ✅ Security attributes present (`rel="noopener noreferrer"`)
+- ✅ Hover state shows underline
+- ✅ All original header functionality preserved (search, theme, language)
+
+### Responsive Testing
+- ✅ Desktop: Full navigation visible
+- ✅ Tablet: Portfolio link present
+- ✅ Mobile: Falls back to Starlight's mobile menu (portfolio link hidden)
+
+## Maintenance Considerations
+
+### Keeping Up with Starlight Updates
+
+**Challenge**: This override copies Starlight's internal Header implementation. When Starlight updates, the Header component might change.
+
+**Mitigation strategies**:
+
+1. **Pin Starlight version** in `package.json` to avoid unexpected breakages
+2. **Monitor releases**: Watch Starlight's changelog for Header changes
+3. **Test after updates**: Run visual regression tests when upgrading Starlight
+4. **Consider upstreaming**: If this pattern is useful, consider proposing Header slots to the Starlight project
+
+### Alternative Approach for the Future
+
+If Starlight adds proper slot support to Header, this could be simplified to:
+
+```astro
+---
+import Default from '@astrojs/starlight/components/Header.astro';
+---
+
+<Default {...Astro.props}>
+  <a slot="before-theme" href="https://portfolio.devportals.tech">
+    Portfolio
+  </a>
+</Default>
+```
+
+This would be more maintainable and less likely to break with updates.
+
+## Results and Lessons Learned
+
+### What Worked Well
+
+1. **Subdomain architecture**: Clean separation, independent deployments, easy DNS setup
+2. **Component override pattern**: Full control over layout and styling
+3. **Design system integration**: Using Starlight's CSS variables ensures consistency
+4. **Iterative debugging**: Testing after each change helped isolate issues quickly
+
+### Key Takeaways for Documentation Engineers
+
+1. **Read the source code**: When documentation is unclear, the source is the ultimate truth
+2. **Start simple, iterate**: Begin with minimal implementation, add complexity incrementally
+3. **Respect the design system**: Use framework-provided variables for maintainability
+4. **Document your overrides**: This blog post itself is part of the solution—future me will thank current me
+5. **Understand plugin vs. override patterns**: Plugins get blessed APIs, custom work requires deeper integration
+
+### Skills Demonstrated
+
+This project showcases several skills critical for senior technical writers and documentation engineers:
+
+- **Technical architecture**: Understanding DNS, subdomains, and deployment strategies
+- **Framework expertise**: Deep dive into Astro, Starlight, and component systems
+- **Plugin system understanding**: Recognizing when to use plugins vs. manual overrides
+- **Research methodology**: Finding answers through docs, source code, and experimentation
+- **Problem-solving**: Systematic debugging and iterative refinement
+- **Code implementation**: Writing production-ready Astro components
+- **Cross-framework integration**: Connecting Next.js and Astro applications
+- **Documentation**: Creating a comprehensive guide for future reference
+
+## Conclusion
+
+Integrating a Next.js portfolio site as a subdomain and adding it to Starlight's navigation required a combination of infrastructure knowledge, component architecture understanding, and systematic troubleshooting. The subdomain approach provides deployment flexibility while maintaining brand cohesion, and the component override pattern—though more complex than ideal—gives complete control over the navigation experience.
+
+For documentation engineers and technical writers building their own sites, this pattern demonstrates how to think architecturally about content delivery while maintaining the hands-on technical skills to implement custom solutions.
+
+The complete code for this integration is available in my [devportals-starlight repository](https://github.com/j-romo/devportals-starlight) on the `feature-portfolio-label` branch.
+
+---
+
+**Want to see it in action?** Visit [devportals.tech](https://devportals.tech) and check out the Portfolio link in the navigation bar, or go directly to [portfolio.devportals.tech](https://portfolio.devportals.tech).
