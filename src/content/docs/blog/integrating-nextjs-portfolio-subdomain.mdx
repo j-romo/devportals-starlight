@@ -25,6 +25,8 @@ I had already built a documentation site using Astro and Starlight at `devportal
 
 This post walks through the technical decisions, implementation challenges, and solutions I encountered while integrating these two separate applications into a cohesive experience.
 
+{/* excerpt */}
+
 ## The Challenge: Two Sites, One Domain
 
 I had two distinct applications:
@@ -50,8 +52,6 @@ I considered three approaches:
 - **Cons**: Splits SEO slightly, requires DNS configuration
 
 **I chose the subdomain approach** because it provided the best balance of deployment flexibility and brand cohesion. Each application can be deployed independently, use different frameworks, and scale separately while still feeling like part of the same ecosystem.
-
-{/* excerpt */}
 
 ## Infrastructure Setup: DNS and Vercel Configuration
 
