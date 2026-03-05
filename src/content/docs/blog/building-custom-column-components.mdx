@@ -1,0 +1,399 @@
+---
+title: "Building Custom Column Components for Text Comparisons"
+description: "How I built two Sanity + Astro column components for parallel text comparisons, balancing creative AI input with practical UX."
+date: 2026-03-04
+authors:
+  - name: Joaquin Romo
+tags:
+  - sanity
+  - astro
+  - components
+  - portable-text
+  - css
+  - ai
+tableOfContents:
+  minHeadingLevel: 2
+  maxHeadingLevel: 2
+---
+
+I needed a way to display text side-by-side for translation comparisons in blog posts. This post walks through the two component variants I shipped, the decisions behind them, and the pattern that kept the implementation simple and maintainable.
+
+{/* excerpt */}
+
+## What I Asked For vs. What I Got
+
+While Sanity CMS has a rich ecosystem of plugins, I couldn't find anything specifically designed for parallel text display that would work seamlessly with our Astro + Sanity setup. I asked my AI pair programmer: "Let's build a two-column component for text comparisons."
+
+**What I had in mind:** A simple, clean layout - just two columns of text side-by-side. Functional. Straightforward.
+
+**What the AI built:** A boxed container with gray background, borders, visual separators, and styled like a callout component.
+
+My first reaction was, "That's not what I pictured." But after reviewing it, the design was strong. It gave the comparison visual weight and emphasis. For formal translations or important side-by-side content, the container style made it stand out on the page.
+
+This is where human-AI collaboration gets interesting.
+
+## Building Two Instead of One
+
+Instead of asking the AI to redo it to match my original vision, I said: "I like this, but can we also make a second version? A plain newspaper-style layout without the container?"
+
+We kept both. That was the real insight: **AI does not replace your ideas, it augments them**. Now I had two components where I originally planned for one:
+
+1. **Container Columns** — The AI's interpretation with emphasis styling
+2. **Newspaper Columns** — The original vision of subtle, flowing text
+
+Two different tools for different contexts.
+
+## Container Columns: The Creative Interpretation
+
+The first implementation was more elaborate than my original ask:
+
+- **Two text input fields** (left and right columns)
+- **50/50 split** on desktop
+- **Responsive stacking** on mobile
+- **Visual container** with background and borders for emphasis
+- **Optional label** for headings like "English | Spanish"
+
+### Schema Definition
+
+The schema was text-only to keep it simple:
+
+```typescript
+// src/sanity/schemaTypes/objects/containerColumns.ts
+export default defineType({
+  name: 'containerColumns',
+  title: 'Container Columns',
+  type: 'object',
+  fields: [
+    {
+      name: 'leftText',
+      type: 'text',
+      rows: 10,
+      validation: (Rule) => Rule.required(),
+    },
+    {
+      name: 'rightText',
+      type: 'text',
+      rows: 10,
+      validation: (Rule) => Rule.required(),
+    },
+    {
+      name: 'label',
+      type: 'string',
+      description: 'Optional label (e.g., "English | Spanish")',
+    },
+  ],
+});
+```
+
+### The Renderer Component
+
+The Astro component uses CSS Grid for the layout:
+
+```astro
+<!-- src/components/PortableTextContainerColumns.astro -->
+<div class="container-columns-wrapper">
+  {label && <div class="container-columns-label">{label}</div>}
+  <div class="container-columns-container">
+    <div class="column column-left">
+      <p set:html={formatText(leftText)} />
+    </div>
+    <div class="column column-right">
+      <p set:html={formatText(rightText)} />
+    </div>
+  </div>
+</div>
+
+<style>
+  .container-columns-container {
+    display: grid;
+    grid-template-columns: 1fr 1fr;
+    gap: 2rem;
+    padding: 1.5rem;
+    background-color: rgb(var(--gray-light));
+    border-radius: 8px;
+    border: 1px solid rgb(var(--gray));
+  }
+
+  @media (max-width: 768px) {
+    .container-columns-container {
+      grid-template-columns: 1fr;
+    }
+  }
+</style>
+```
+
+**Key design decisions:**
+- Gray background and border for visual emphasis
+- Divider line between columns on desktop
+- Line breaks preserved with `white-space: pre-wrap`
+- Mobile-first responsive design
+
+## The Evolution: Newspaper Columns
+
+After testing the boxed layout, I realized there was another use case — flowing text that did not need the heavy visual container. Think newspaper-style columns or subtle side-by-side comparisons that integrate more naturally with body text.
+
+The "newspaper columns" variant would:
+- Remove the box styling entirely
+- Keep just the column structure
+- Be more subtle and versatile
+
+### Naming Matters
+
+I initially called it `twoColumnText`, but "newspaper columns" felt more evocative and descriptive. The name instantly communicates the visual style.
+
+### The Second Component
+
+The schema is nearly identical, but the renderer is much lighter:
+
+```astro
+<!-- src/components/PortableTextNewspaperColumns.astro -->
+<div class="newspaper-columns-container">
+  <div class="newspaper-column">
+    <p set:html={formatText(leftText)} />
+  </div>
+  <div class="newspaper-column">
+    <p set:html={formatText(rightText)} />
+  </div>
+</div>
+
+<style>
+  .newspaper-columns-container {
+    display: grid;
+    grid-template-columns: 1fr 1fr;
+    gap: 3rem; /* Wider gap since there's no divider */
+  }
+  /* No background, no borders, no container styling */
+</style>
+```
+
+## Adding Text Alignment
+
+With the cleaner newspaper columns, text alignment became more important. The question was: **one alignment for both columns, or independent alignment per column?**
+
+### The Decision: Independent Alignment
+
+Independent alignment per column unlocks more use cases:
+- **RTL languages:** Arabic or Hebrew in the right column, right-aligned
+- **Creative layouts:** Centered poetry next to left-aligned prose
+- **Visual balance:** Match the text style to the content type
+
+Implementation was straightforward:
+
+```typescript
+// Added to newspaperColumns schema
+{
+  name: 'leftAlign',
+  title: 'Left Column Alignment',
+  type: 'string',
+  options: {
+    list: [
+      { title: 'Left', value: 'left' },
+      { title: 'Center', value: 'center' },
+      { title: 'Right', value: 'right' },
+    ],
+  },
+  initialValue: 'left',
+},
+{
+  name: 'rightAlign',
+  title: 'Right Column Alignment',
+  type: 'string',
+  options: {
+    list: [
+      { title: 'Left', value: 'left' },
+      { title: 'Center', value: 'center' },
+      { title: 'Right', value: 'right' },
+    ],
+  },
+  initialValue: 'left',
+},
+```
+
+Applied in the template with inline styles:
+
+```astro
+<div style={`text-align: ${leftAlign}`}>
+  <p set:html={formatText(leftText)} />
+</div>
+<div style={`text-align: ${rightAlign}`}>
+  <p set:html={formatText(rightText)} />
+</div>
+```
+
+## Technical Implementation Details
+
+### Why Custom Components?
+
+Sanity has a plugin ecosystem, but custom components give you:
+- **Full control** over styling and behavior
+- **No dependencies** on third-party packages
+- **Perfect integration** with your design system
+- **Exactly the features you need**, nothing more
+
+### The Three-File Pattern
+
+Every custom Sanity component in our setup requires three files:
+
+1. **Schema Definition** (`src/sanity/schemaTypes/objects/*.ts`)
+   - Defines the data structure
+   - Field types, validation, preview
+
+2. **Renderer Component** (`src/components/PortableText*.astro`)
+   - How it displays on the frontend
+   - Styling, layout, interactivity
+
+3. **Registry Updates**
+   - `src/sanity/schemaTypes/index.ts` — Import and register schema
+   - `src/sanity/schemaTypes/post.ts` — Add to post body field
+   - `src/components/PortableText.astro` — Register renderer
+
+### Critical Implementation Notes
+
+**Must update `post.ts` body field:**
+```typescript
+defineField({
+  name: 'body',
+  type: 'array',
+  of: [
+    { type: 'block' },
+    { type: 'image' },
+    { type: 'containerColumns' },  // ADD HERE
+    { type: 'newspaperColumns' },  // AND HERE
+  ],
+}),
+```
+
+This is easy to miss. The post schema defines its own body field inline, so you must explicitly add new component types there.
+
+**Sanity Studio deployment is separate:**
+```bash
+# Frontend deploys automatically via GitHub Actions
+git push origin main
+
+# Studio must be deployed manually
+npx sanity build
+npx sanity deploy dist
+```
+
+The Studio is a separate React app hosted on Sanity's infrastructure. Schema changes will not appear in production Studio until you deploy it.
+
+### Line Break Preservation
+
+Text fields in Sanity preserve newlines, but they need special handling in HTML:
+
+```typescript
+const formatText = (text: string) => {
+  return text.replace(/\n/g, '<br>');
+};
+```
+
+Then render with `set:html`:
+```astro
+<p set:html={formatText(leftText)} />
+```
+
+Combined with `white-space: pre-wrap` in CSS, this preserves the author's intended formatting.
+
+## Lessons Learned
+
+### Complexity vs. Features
+
+The initial thought was to support full Portable Text (rich text with nested blocks) in each column. That would have been significantly more complex — recursive rendering, nested component handling, edge cases galore.
+
+Text-only was the right call. It covers most use cases and took a fraction of the development time.
+
+### Naming Is Design
+
+"Two Column Layout" → Generic, unclear
+"Container Columns" → Describes the visual style
+"Newspaper Columns" → Instantly conveys the aesthetic
+
+Good names make components discoverable and understandable in the Studio UI.
+
+### Start Simple, Add Features
+
+Version 1: Just two text fields, 50/50 split
+Version 2: Add optional label
+Version 3: Create second variant (newspaper)
+Version 4: Add alignment options to newspaper columns
+
+Each step was tested and working before moving to the next. Incremental development prevents half-finished features.
+
+## Use Cases
+
+### Container Columns (Boxed)
+- Translation comparisons that need emphasis
+- Code examples side-by-side
+- Before/after text
+- Formal comparisons (technical writing)
+
+### Newspaper Columns (Plain)
+- Poetry in multiple languages
+- Flowing parallel narratives
+- Subtle text comparisons
+- Academic citations with translations
+- RTL language support
+
+## Performance Considerations
+
+These components are statically rendered at build time:
+- No client-side JavaScript
+- Pure HTML and CSS
+- Fast page loads
+- SEO-friendly
+
+The only runtime work is CSS Grid layout, which is native and performant.
+
+## Future Enhancements
+
+Potential additions (not implemented yet):
+- **Font size controls** per column
+- **Column width ratio** (60/40, 70/30)
+- **Vertical divider toggle** for newspaper columns
+- **Background color picker** for container columns
+- **Rich text support** (would be complex but powerful)
+
+## Conclusion
+
+This project taught me something important about working with AI as a creative partner.
+
+When I asked for "a two-column component," I had a specific mental image. The AI gave me something different, and better, in its own way. Container Columns was not what I expected, but it solved use cases I had not considered. The boxed style gives emphasis and visual hierarchy that my simpler vision would have lacked.
+
+Instead of discarding the AI's interpretation and insisting on my original idea, we built both. **This is the power of human–AI collaboration** — it is not about the AI executing your exact specifications, it is about the AI providing perspectives and possibilities you would not have considered.
+
+### AI as Creative Augmentation
+
+Working with an AI pair programmer does not mean:
+- The AI replaces your creativity
+- You fight to get exactly what you envisioned
+- You choose between your idea or the AI's suggestion
+
+It means:
+- The AI expands your catalogue of solutions
+- You get multiple perspectives on the same problem
+- You build more instead of choosing one
+- Creative friction becomes creative abundance
+
+I started this session wanting to build one component. I ended with two, each serving different purposes, each valuable in its own context. That is not compromise — that is multiplication.
+
+### The Numbers
+
+**What I asked for:** 1 component
+**What we built:** 2 components
+**Total development time:** ~2 hours
+**Lines of code:** ~300
+**Dependencies added:** 0
+**My perspectives:** 1
+**Combined perspectives:** 2
+**Problems solved:** Many 
+
+Building custom Sanity components is not as daunting as it seems. With a clear understanding of the three-file pattern, careful incremental development, and a collaborative mindset with your AI pair programmer, you can create tailored solutions that not only fit your needs but expand beyond what you originally imagined.
+
+Sometimes the best result is not getting exactly what you asked for — it is getting what you asked for plus something you did not know you needed.
+
+---
+
+## Related Documentation
+
+- [How to Add Custom Components Guide](https://github.com/j-romo/pbnj-blog/blob/main/docs/adding-custom-components-guide.md)
+- [Component Reference Library](https://github.com/j-romo/pbnj-blog/blob/main/docs/component-reference-library.md)
