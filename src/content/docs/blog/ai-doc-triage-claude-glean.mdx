@@ -1,0 +1,247 @@
+---
+title: "From Investigation to Skill: AI-Assisted Documentation Triage with Claude Code and Glean MCP"
+description: "How I turned a duplicate TOC investigation into a reusable documentation triage skill using Claude Code and Glean MCP."
+date: 2026-05-19
+authors:
+  - name: Joaquin Romo
+tags:
+  - ai
+  - documentation
+  - claude-code
+  - glean
+  - triage
+  - workflow
+tableOfContents:
+  minHeadingLevel: 2
+  maxHeadingLevel: 2
+---
+
+I used to write up blog posts after every meaningful session with Copilot or
+Augment — not just to share what I built, but to lock in my own understanding
+of what happened. This is one of those posts. What started as a coworker
+pinging me about some broken navigation in our docs site turned into a full
+investigation workflow, a shareable report, and eventually a reusable AI skill.
+Here's how it went.
+
+{/* excerpt */}
+
+## The Problem: Pages That Lived in Two Places at Once
+
+A colleague on the docs team flagged something they'd noticed while doing QA on
+our documentation site: certain pages were appearing in the table of contents
+(TOC) more than once, under different navigation paths. This isn't just a
+cosmetic issue — in our docs platform, when a page is referenced by more than
+one TOC parent, the previous/next navigation arrows break. Clicking "next" on a
+page that has two TOC parents gets overridden by whichever parent "wins" in the
+build, so readers can get stuck or end up navigating in the wrong direction.
+
+The colleague had already fixed similar issues in another section of the docs,
+and the solutions they'd found ranged from removing one TOC entry to splitting
+content into separate pages using shared includes. They weren't sure which fix
+applied here, and neither was I without digging into the source.
+
+The ask was clear: investigate the three affected pages, figure out which TOC
+entry is the "original" and which is the duplicate, and recommend what to do
+about each one.
+
+## Why I Reached for Claude Code Instead of Doing It Manually
+
+Our documentation lives in a large monorepo. The kind of investigation I needed
+to do involves:
+
+- Finding the source `.rst` or `.txt` file for each affected URL
+- Searching the entire content tree for every file that references it in a toctree directive
+- Tracing those toctree references up through multiple levels of parent files to
+	reconstruct the full navigation breadcrumb
+- Checking git history to understand which came first and which ticket introduced the duplication
+- Looking for orphaned alternative files that might have been intended as
+	section-specific replacements
+
+Doing that manually for three pages across a large repo is tedious but doable.
+The issue is that the same type of problem will come up again. If I do it
+manually once, I'm doing it manually every time. I wanted to document the
+workflow *as* I ran it, so it could become repeatable.
+
+Claude Code was the right tool for that. It can execute shell commands, grep
+across the codebase, read files, and call external MCP tools — all within a
+single conversation. That last part is where things got interesting.
+
+## Glean MCP: The Part That Made the Research Richer
+
+At my organization we have corporate access to Glean, and there's a Glean MCP
+server configured in our Claude Code environment. This means that within the
+same session where I'm running `grep` and `git log`, I can also search Slack,
+Jira, Confluence, and other internal tools through Glean's unified search.
+
+For this investigation, Glean let me:
+
+- **Fetch the Jira ticket** directly in the conversation — not just the title,
+  but the full description, the reporter's comments, and the custom URL fields
+  — without switching to a browser
+- **Search Slack** for related discussions about the affected pages
+- **Trace context** that doesn't exist in the code: who filed the original
+	issue, what the reporter observed in the UI, and whether there had been prior
+	decisions about how to handle similar cases
+
+Without Glean, I would have had the git history and the file contents. With
+Glean, I also had the human context around why things were the way they were.
+That combination — repo intelligence plus organizational memory — made the
+recommendations much more grounded.
+
+One practical note: Glean MCP requires OAuth authentication at the start of each
+session, and the Jira MCP in our setup sometimes returns unexpected errors. In
+practice I found that using Glean as the primary tool for ticket fetching and
+Jira MCP as a fallback worked better than the reverse. This is the kind of
+thing you only learn by running the workflow a few times.
+
+## The Investigation Methodology
+
+Here's the core pattern I ran for each affected page:
+
+**1. Map the URL to a source file.**
+Strip the base URL prefix and resolve the path to a `.txt` file in the content
+directory. Confirm the file exists with a glob search.
+
+**2. Grep for all toctree references.**
+Search the entire content tree for any file that references the source file by
+path. Filter for matches inside `.. toctree::` blocks specifically — inline
+`:ref:` links don't create nav nodes and aren't the source of the problem.
+
+**3. Trace the full breadcrumb.**
+For each toctree reference found, walk up the parent chain to reconstruct the
+full navigation path (e.g., *Product Root → Section → Subsection → Page*). This
+is the breadcrumb a reader would see in the sidebar.
+
+**4. Check git history.**
+Run `git log --follow` on the source file to find the creation commit and its
+associated ticket. Then do the same for each toctree parent file to find when
+the second reference was added and what introduced it.
+
+**5. Search for orphan alternatives.**
+Look for files marked `:orphan:` (Sphinx's way of saying "this file exists but
+isn't in any toctree") that cover the same topic. An orphan is often a sign
+that someone intended to create a section-specific page but never wired it into
+the navigation.
+
+After running this for all three affected pages, a clear pattern emerged: in two
+of the three cases, a general-purpose page from the core security section was
+being referenced directly inside a Data Federation navigation subtree. There
+were section-specific alternative files for both, but they were orphaned —
+present in the repo but unreachable because they had never been added to any
+toctree. In the third case, a single Data Federation page had been added to two
+different toctree parents within the same section.
+
+The nature of the duplicate matters for the fix. A cross-section reuse (general
+page pulled into a different section's TOC) usually means you need to wire up
+the orphaned section-specific alternative and remove the general page from the
+wrong toctree. A same-section double entry just means removing one of the two
+toctree references and optionally replacing it with an inline cross-reference.
+
+## Making the Output Shareable
+
+After the investigation, I had a detailed analysis in my Claude Code
+conversation window. The next natural question was: how do I share this with my
+colleague and the broader team?
+
+The conversation text is well-formatted Markdown, but it only exists in my
+session. I needed something with a stable URL I could paste into Slack or
+attach to the ticket.
+
+The answer was a secret GitHub Gist. With one `gh gist create` command piped
+from the conversation output, I had a Gist URL I could share immediately.
+Secret Gists aren't indexed publicly but anyone with the link can read them —
+perfect for internal sharing without putting anything on a public page.
+
+Later, thinking about this more, I realized there should also be a shorter
+option: posting a summary comment directly on the Jira ticket. Not the full
+investigation report, but a concise version with the summary table and one
+action item per duplicate. Something a ticket watcher could read in thirty
+seconds and know exactly what needs to happen.
+
+That distinction — a full report for the people doing the work, a short summary
+for everyone watching the ticket — is a real workflow difference, and it's
+worth designing for explicitly.
+
+## Turning the Workflow into a Skill
+
+This is the part I'm most excited about sharing, because it's where the session
+stopped being about *this specific problem* and started being about *every
+future version of this problem*.
+
+Claude Code supports custom skills: structured prompt files that encode a
+repeatable workflow. A skill is essentially a well-documented instruction set
+that Claude follows when you invoke it with a slash command. You write it once;
+future Claude sessions (and your teammates' sessions) can run it without
+needing to know how the investigation works internally.
+
+I wrote the `check-duplicate-toc` skill to encode the full methodology above.
+It accepts a Jira ticket key as input, authenticates Glean, fetches the ticket,
+extracts the duplicate URLs, runs the investigation steps, and outputs
+recommendations with a specific call to action per duplicate.
+
+A few decisions I made while writing the skill that I think are worth calling out:
+
+**Critical Rules as guardrails.** The skill opens with a block of rules it must
+never violate: no modifying source files, no committing, no updating Jira
+tickets without explicit permission. These aren't Claude's default behaviors —
+they're explicit constraints that prevent the investigation from accidentally
+becoming a change. An investigation tool should investigate, not act.
+
+**Two input modes.** The first version required a Jira ticket key. But then I
+thought: what if someone notices a duplicate while browsing and doesn't have a
+ticket yet? Adding a URL mode — where you pass two or more docs URLs directly,
+and the skill skips ticket fetching — makes the skill useful for ad-hoc
+investigations without requiring the overhead of ticket creation first.
+
+**Two output modes for `--printreport`.** The `--printreport gist` flag
+publishes the full detailed report as a secret Gist. The `--printreport jira`
+flag posts a short summary comment on the ticket, using Jira wiki markup and a
+fixed opening line:
+
+> *"Duplicate TOC investigation complete. Found N duplicate page entries. All
+> fixes are toctree-only — no content changes required."*
+
+That opening line is deliberate. It tells stakeholders the work is done,
+quantifies the scope, and reassures them that the fix is low-risk (toctree
+edits only, no content changes). Both flags can be combined if you want both
+outputs at once.
+
+**Generic, not product-specific.** The first draft of the skill had some Atlas-
+and Data Federation-specific logic baked in, because that's the context of the
+ticket that inspired it. I generalized it before publishing — the skill now
+resolves the content directory from the source file's location, so it works
+equally well across any product in the monorepo.
+
+## What I'd Recommend If You're Doing Something Similar
+
+If you're a docs engineer or technical writer working in a large monorepo and
+you're considering using Claude Code for investigation and triage work, here's
+what I'd pass along:
+
+**MCP integrations are what separate "AI that knows your code" from "AI that
+knows your organization."** The repo is only part of the context. Being able to
+pull Slack history, Jira comments, and internal knowledge bases into the same
+conversation changes the quality of what you can produce. If your org has
+Glean, get it wired into your Claude Code environment.
+
+**Write skills for workflows you run more than twice.** The investigation I
+described above is not a one-off. TOC duplication happens regularly, especially
+in large monorepos where content gets reorganized. The skill pays for itself
+the second time you run it.
+
+**Design for sharing from the start.** The gist approach came naturally because
+I was thinking about the output needing to travel outside the conversation. If
+you're doing investigation work with AI tools, plan early for how you'll hand
+off the findings. A well-structured Jira comment or a Gist URL is far more
+durable than a screenshot of a chat window.
+
+**Generalize one step further than the immediate problem.** The ticket that
+prompted this was about three specific pages. The skill works on any number of
+pages, in any product, with or without a ticket. That extra twenty minutes of
+generalization means the next person on the team who runs into a similar issue
+can just use the skill — they don't need to reconstruct the methodology from
+scratch.
+
+*If you've been doing something similar with AI tools in your documentation
+workflow, I'd love to hear about it. Find me on devportals.tech or reach out
+directly.*
